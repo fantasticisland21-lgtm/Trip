@@ -15,8 +15,8 @@
 <style>
 :root{--bg:#f6f4ef;--card:#fff;--ink:#222;--sub:#6b6b6b;--main:#e8590c;--main2:#fff1e6;--line:#e3ded4;--ok:#2b8a3e;--ng:#c92a2a;--r:14px}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;padding-bottom:calc(env(safe-area-inset-bottom) + 30px)}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden;max-width:100%}
+body{margin:0;overflow-x:hidden;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y pinch-zoom;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;padding-bottom:calc(env(safe-area-inset-bottom) + 30px)}
 button,input,select,textarea{font:inherit;color:inherit}
 h1{font-size:20px;margin:0}
 h2{font-size:17px;margin:0}
@@ -24,6 +24,8 @@ a{color:#1c7ed6}
 .center{text-align:center;padding:60px 20px;color:var(--sub)}
 header.top{position:sticky;top:0;z-index:5;background:var(--main);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:8px}
 header.top .ttl{font-weight:700;font-size:18px;flex:1;white-space:nowrap}
+header.top .ver{display:block;font-size:11px;font-weight:400;opacity:.85}
+.verfoot{text-align:center;color:var(--sub);font-size:12px;margin-top:18px}
 header.top .who{font-size:12px;opacity:.9;max-width:40vw;display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-radius:10px;padding:8px 12px}
 #offline{display:none;background:#fff3bf;color:#5f3b00;padding:8px 14px;font-size:14px;text-align:center}
@@ -57,7 +59,7 @@ header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-rad
 .tag.gray{background:#eee;color:#555}
 .dhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .back{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;white-space:nowrap}
-.tabs{display:flex;gap:6px;overflow-x:auto;margin:8px -14px;padding:0 14px 6px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
+.tabs{touch-action:pan-x pan-y;display:flex;gap:6px;overflow-x:auto;margin:8px -14px;padding:0 14px 6px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
 .tabs button{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;padding:8px 16px;min-height:40px}
 .tabs button.on{background:var(--main);border-color:var(--main);color:#fff;font-weight:700}
 .note{background:#e7f5ff;color:#1864ab;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
@@ -91,11 +93,14 @@ header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-rad
 label.f{display:block;margin:10px 0 2px;font-size:14px;color:var(--sub)}
 input[type=text],input[type=email],input[type=password],input[type=url],input[type=date],input[type=time],input[type=number],input[type=datetime-local],select,textarea{width:100%;padding:10px;border:1px solid #cfc9bd;border-radius:10px;background:#fff;font-size:16px;min-height:44px}
 textarea{min-height:70px}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.row2>div{min-width:0}
+input[type=date],input[type=time],input[type=datetime-local]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%}
+input,select,textarea{max-width:100%}
 .chk{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:16px}
 .chk input{width:22px;height:22px}
 .mback{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.msheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 20px)}
+.msheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overflow-x:hidden;border-radius:18px 18px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 20px)}
 @media(min-width:700px){.mback{align-items:center}.msheet{border-radius:18px}}
 .mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .mh button{background:#eee;border:0;border-radius:50%;width:36px;height:36px;font-size:18px}
@@ -168,6 +173,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
+const VERSION = 'v2 (2026-10-15 20:45)';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TYPES = { sight:['観光','🎡'], move:['移動','🚃'], meal:['食事','🍽️'], rest:['休憩','☕'], stay:['宿泊','🏨'], other:['その他','⭐'] };
@@ -244,16 +250,19 @@ function subscribeTrips() {
       S.trips = [...m.values()].sort((a,b) => (a.start || '').localeCompare(b.start || ''));
       if (S.tripId && !m.has(S.tripId)) { unsubTrip(); S.tripId = null; }
       render();
-    }, err => toast('旅行を読みこめません(' + err.code + ')', true)));
+    }, err => toast('旅行を読みこめません(' + err.code + ')' + (err.code === 'permission-denied' ? '。Firebaseのルールが公開されているか確認してください' : ''), true)));
   }
 }
 function openTrip(id) {
   unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.calSel = null; S.calMonth = null;
-  for (const [k,name] of [['events','events'],['cands','candidates'],['resvs','reservations']]) {
-    S.unSub.push(onSnapshot(collection(db,'trips',id,name), snap => {
-      S[k] = snap.docs.map(d => ({ id:d.id, ...d.data() })); render();
-    }, err => toast('読みこめません(' + err.code + ')', true)));
-  }
+  const listen = (k, name, tries) => onSnapshot(collection(db,'trips',id,name), snap => {
+    S[k] = snap.docs.map(d => ({ id:d.id, ...d.data() })); render();
+  }, err => {
+    // 作ったばかりの旅行はFirebaseへの保存が少し遅れることがあるので、数回やり直す
+    if (tries < 3 && S.tripId === id) setTimeout(() => { if (S.tripId === id) S.unSub.push(listen(k, name, tries + 1)); }, 1500 * (tries + 1));
+    else toast('読みこめません(' + err.code + ')', true);
+  });
+  for (const [k,name] of [['events','events'],['cands','candidates'],['resvs','reservations']]) S.unSub.push(listen(k, name, 0));
   render(); window.scrollTo(0,0);
 }
 function closeTrip() { unsubTrip(); S.tripId = null; render(); window.scrollTo(0,0); }
@@ -292,7 +301,7 @@ function render() {
   if (!S.ready) { app.innerHTML = '<div class="center">読みこみ中…</div>'; return; }
   if (!S.user) { app.innerHTML = authHTML(); return; }
   const t = curTrip();
-  app.innerHTML = `<header class="top"><div class="ttl">✈️ 家族旅行ノート</div><div class="who">${esc(S.email)}</div><button data-a="logout">ログアウト</button></header>
+  app.innerHTML = `<header class="top"><div class="ttl">✈️ 家族旅行ノート<span class="ver">${VERSION}</span></div><div class="who">${esc(S.email)}</div><button data-a="logout">ログアウト</button></header>
   <div class="wrap ${t ? 'has-trip' : ''}"><aside class="side">${listHTML()}</aside><main class="main">${t ? detailHTML(t) : '<div class="empty">左の一覧から旅行をえらんでください</div>'}</main></div>`;
 }
 
@@ -307,7 +316,7 @@ function authHTML() {
   </form>
   <p style="text-align:center;margin:14px 0 0"><button class="mini" data-a="authMode">${login ? '初めての人は「新規登録」' : 'もう登録した人は「ログイン」'}</button></p>
   ${login ? '<p style="text-align:center;margin:8px 0 0"><button class="mini" data-a="resetPw">パスワードを忘れたとき</button></p>' : ''}
-  </div></div>`;
+  </div><div class="verfoot">バージョン ${VERSION}</div></div>`;
 }
 
 function listHTML() {
@@ -408,6 +417,7 @@ function settingsHTML(t, par) {
    <div class="card"><h2>家族のメンバー</h2>
     <div class="sub" style="margin-top:6px"><b>保護者(編集できる)</b><br>${(t.parents || []).map(esc).join('<br>') || '-'}</div>
     <div class="sub" style="margin-top:6px"><b>見るだけ</b><br>${(t.viewers || []).map(esc).join('<br>') || '-'}</div></div>
+   <div class="card"><h2>アプリの情報</h2><div class="sub" style="margin-top:6px">バージョン: ${VERSION}<br>ログイン中: ${esc(S.email)}<br>あなたの権限: ${par ? '保護者(編集できる)' : '見るだけ'}</div></div>
    <div class="card"><h2>データのバックアップ</h2><div class="sub">この旅行の中身をファイルに書き出します</div>
     <div class="eact"><button class="mini" data-a="exportJson">書き出す(JSON)</button></div></div>
    ${par ? `<div class="card"><h2>旅行の削除</h2><div class="eact"><button class="mini ng" data-a="delTrip" data-id="${t.id}">この旅行を削除</button></div></div>` : ''}`;
@@ -462,7 +472,7 @@ function tripForm(t, mode) {
   const d = t || { name:'USJ家族旅行', dest:'ユニバーサル・スタジオ・ジャパン', start:'', end:'', people:'大人2人・子ども2人', notice:'', memo:'', parents:[S.email], viewers:[] };
   openModal(n ? '新しい旅行' : '基本情報を編集', `<form data-f="trip" data-id="${n ? '' : t.id}">
    ${inp('name','旅行名',d.name,'text','required')}${inp('dest','行き先',d.dest)}
-   <div class="row2">${inp('start','出発日',d.start,'date','required')}${inp('end','帰宅日',d.end,'date','required')}</div>
+   <div class="row2"><div>${inp('start','出発日',d.start,'date','required')}</div><div>${inp('end','帰宅日',d.end,'date','required')}</div></div>
    ${inp('people','参加者',d.people)}
    ${area('notice','家族への連絡事項(しおりにのります)',d.notice)}
    ${area('memo','メモ(大人向け)',d.memo)}
@@ -478,7 +488,7 @@ function evForm(id, presetDate) {
   const d = e || { date: presetDate || t.start, start:'', end:'', title:'', kidTitle:'', kidNote:'', type:'sight', place:'', address:'', url:'', mapUrl:'', memo:'', rainPlan:'', confirmed:true, resvId:'' };
   openModal(e ? '予定を編集' : '予定を追加', `<form data-f="ev" data-id="${e ? e.id : ''}">
    <label class="f">日付(ほかの日に動かすときは変えます)</label><select name="date">${dayOptions(t, d.date)}</select>
-   <div class="row2">${inp('start','開始時刻',d.start,'time')}${inp('end','終了時刻',d.end,'time')}</div>
+   <div class="row2"><div>${inp('start','開始時刻',d.start,'time')}</div><div>${inp('end','終了時刻',d.end,'time')}</div></div>
    ${inp('title','予定名',d.title,'text','required')}
    <label class="f">種類</label><select name="type">${Object.entries(TYPES).map(([k,v]) => `<option value="${k}" ${d.type === k ? 'selected' : ''}>${v[1]} ${v[0]}</option>`).join('')}</select>
    <label class="chk"><input type="checkbox" name="confirmed" ${d.confirmed !== false ? 'checked' : ''}>時刻や内容が決まっている</label>
@@ -528,7 +538,13 @@ const submitters = {
     const viewers = parseEmails(val(fd,'viewers')).filter(x => !parents.includes(x));
     const data = { name: val(fd,'name'), dest: val(fd,'dest'), start, end, people: val(fd,'people'), notice: val(fd,'notice'), memo: val(fd,'memo'), parents, viewers };
     if (id) fire(updateDoc(doc(db,'trips',id), data));
-    else { const ref = doc(collection(db,'trips')); fire(setDoc(ref, { ...data, createdBy: S.email, createdAt: serverTimestamp() })); setTimeout(() => openTrip(ref.id), 50); }
+    else {
+      const ref = doc(collection(db,'trips')); let failed = false; closeModal(); toast('保存しています…');
+      const w = setDoc(ref, { ...data, createdBy: S.email, createdAt: serverTimestamp() })
+        .catch(e => { failed = true; toast('保存できませんでした(' + (e.code || e.message) + ')' + (e.code === 'permission-denied' ? '。Firebaseのルールが公開されているか確認してください' : ''), true); });
+      Promise.race([w, new Promise(r => setTimeout(r, 4000))]).then(() => { if (!failed) { openTrip(ref.id); toast('保存しました'); } });
+      return;
+    }
     closeModal(); toast('保存しました');
   },
   ev(fd, f) {
