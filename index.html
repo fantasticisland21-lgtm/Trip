@@ -80,8 +80,7 @@ header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-rad
 .dayh h2 span{color:var(--main)}
 .ev{display:flex;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin:8px 0}
 .ev.tbd{border-style:dashed;background:#fffdf5}
-.etime{flex:0 0 66px;font-size:20px;font-weight:700;line-height:1.2}
-.etime small{display:block;font-size:12px;font-weight:400;color:var(--sub)}
+.etime{flex:0 0 80px;font-size:20px;font-weight:700;line-height:1.3}
 .ebody{flex:1;min-width:0}
 .ett{font-weight:700;word-break:break-word}
 .memo{background:#f8f9fa;border-radius:8px;padding:4px 8px;margin-top:4px;font-size:14px;white-space:pre-wrap}
@@ -91,6 +90,7 @@ header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-rad
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
 .grid .ev{margin:0;flex-direction:column;gap:2px}
 .grid .etime{flex:none;font-size:18px}
+.grid .etime div{display:inline;margin-right:6px}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:8px 0}
 .cal .h{text-align:center;font-size:12px;color:var(--sub)}
 .cal button{min-height:54px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:2px;font-size:14px}
@@ -182,10 +182,9 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v3 持ち物リスト (2026-10-15 21:10)';
+const VERSION = 'v4 (2026-10-15 21:30)';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const TYPES = { sight:['観光','🎡'], move:['移動','🚃'], meal:['食事','🍽️'], rest:['休憩','☕'], stay:['宿泊','🏨'], other:['その他','⭐'] };
 const WD = ['日','月','火','水','木','金','土'];
 const pad = n => String(n).padStart(2,'0');
 const pd = s => new Date(s + 'T00:00:00');
@@ -364,11 +363,11 @@ function dayHTML(date, i, par, cards) {
    ${list.length ? `<div class="${cards ? 'grid' : ''}">${list.map((e,k) => evHTML(e, k, list.length, par)).join('')}</div>` : '<div class="sub" style="padding:6px">予定はまだありません</div>'}`;
 }
 function evHTML(e, i, n, par) {
-  const [tl, ic] = TYPES[e.type] || TYPES.other; const rv = S.resvs.find(r => r.id === e.resvId);
+  const rv = S.resvs.find(r => r.id === e.resvId);
   const links = [aLink(safeUrl(e.url), '公式サイト'), aLink(mapLink(e), '地図')].join('');
   return `<div class="ev ${e.confirmed === false ? 'tbd' : ''}">
-   <div class="etime">${e.start ? esc(tt(e.start)) : '--:--'}${e.end ? `<small>〜${esc(tt(e.end))}</small>` : ''}</div>
-   <div class="ebody"><div class="ett"><span class="tag">${ic} ${tl}</span>${esc(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}</div>
+   <div class="etime"><div>${e.start ? esc(tt(e.start)) : '--:--'}</div>${e.end ? `<div>〜${esc(tt(e.end))}</div>` : ''}</div>
+   <div class="ebody"><div class="ett">${esc(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}</div>
    ${e.place ? `<div class="sub">📍 ${esc(e.place)}${e.address ? '(' + esc(e.address) + ')' : ''}</div>` : (e.address ? `<div class="sub">📍 ${esc(e.address)}</div>` : '')}
    ${rv ? `<div class="sub">🎫 ${esc(rv.target)}</div>` : ''}
    ${links ? `<div class="links">${links}</div>` : ''}
@@ -462,14 +461,14 @@ function shioriHTML(t) {
   days.forEach((d,i) => {
     const list = dayEvents(d);
     pages += `<section class="page"><div class="sday"><span>${i + 1}日め</span>${fmtD(d)}</div>` + (list.length ? list.map((e,k) => {
-      const [tl, ic] = TYPES[e.type] || TYPES.other; const tbd = e.confirmed === false;
+      const tbd = e.confirmed === false;
       const time = tbd ? '<span class="tbdlabel">みてい</span>' : (e.start ? esc(tt(e.start)) + (e.end ? `<small>〜${esc(tt(e.end))}</small>` : '') : '');
       const place = o.place && e.place ? `<div class="smeta">📍 ${R(e.place)}${e.address ? ' (' + esc(e.address) + ')' : ''}</div>` : '';
       const map = o.map && mapLink(e) ? `<div class="smeta">地図: ${aLink(mapLink(e), esc(mapLink(e)))}</div>` : '';
       const url = o.url && safeUrl(e.url) ? `<div class="smeta">サイト: ${aLink(safeUrl(e.url), esc(e.url))}</div>` : '';
       const rain = o.rain && e.rainPlan ? `<div class="smeta">☔ あめのときは: ${R(e.rainPlan)}</div>` : '';
       const memo = o.memo && e.memo ? `<div class="smeta">${esc(e.memo)}</div>` : '';
-      return `<div class="sc"><div class="snum">${k + 1}</div><div class="stime">${time}</div><div class="sbody">${ic} ${R(e.kidTitle || e.title)}${e.kidNote ? `<div class="snote">${R(e.kidNote)}</div>` : ''}${place}${map}${url}${rain}${memo}</div></div>`;
+      return `<div class="sc"><div class="snum">${k + 1}</div><div class="stime">${time}</div><div class="sbody">${R(e.kidTitle || e.title)}${e.kidNote ? `<div class="snote">${R(e.kidNote)}</div>` : ''}${place}${map}${url}${rain}${memo}</div></div>`;
     }).join('') : '<div class="sempty">この日の予定は まだありません</div>') + '</section>';
   });
   if (o.resv && S.resvs.length) {
@@ -511,12 +510,11 @@ function tripForm(t, mode) {
 function dayOptions(t, sel) { return allDays(t).map(d => `<option value="${d}" ${d === sel ? 'selected' : ''}>${fmtD(d)}</option>`).join(''); }
 function evForm(id, presetDate) {
   const t = curTrip(); const e = id ? S.events.find(x => x.id === id) : null;
-  const d = e || { date: presetDate || t.start, start:'', end:'', title:'', kidTitle:'', kidNote:'', type:'sight', place:'', address:'', url:'', mapUrl:'', memo:'', rainPlan:'', confirmed:true, resvId:'' };
+  const d = e || { date: presetDate || t.start, start:'', end:'', title:'', kidTitle:'', kidNote:'', place:'', address:'', url:'', mapUrl:'', memo:'', rainPlan:'', confirmed:true, resvId:'' };
   openModal(e ? '予定を編集' : '予定を追加', `<form data-f="ev" data-id="${e ? e.id : ''}">
    <label class="f">日付(ほかの日に動かすときは変えます)</label><select name="date">${dayOptions(t, d.date)}</select>
    <div class="row2"><div>${inp('start','開始時刻',d.start,'time')}</div><div>${inp('end','終了時刻',d.end,'time')}</div></div>
    ${inp('title','予定名',d.title,'text','required')}
-   <label class="f">種類</label><select name="type">${Object.entries(TYPES).map(([k,v]) => `<option value="${k}" ${d.type === k ? 'selected' : ''}>${v[1]} ${v[0]}</option>`).join('')}</select>
    <label class="chk"><input type="checkbox" name="confirmed" ${d.confirmed !== false ? 'checked' : ''}>時刻や内容が決まっている</label>
    ${inp('place','場所',d.place)}${inp('address','住所',d.address)}
    ${inp('url','公式サイトのURL',d.url,'url','placeholder="https://"')}${inp('mapUrl','地図のURL(空なら場所から自動で作ります)',d.mapUrl,'url','placeholder="https://"')}
@@ -585,7 +583,7 @@ const submitters = {
   ev(fd, f) {
     const id = f.dataset.id; const old = id ? S.events.find(x => x.id === id) : null;
     const date = val(fd,'date'), start = val(fd,'start');
-    const data = { date, start, end: val(fd,'end'), title: val(fd,'title'), type: val(fd,'type'), confirmed: fd.get('confirmed') === 'on', place: val(fd,'place'), address: val(fd,'address'), url: val(fd,'url'), mapUrl: val(fd,'mapUrl'), resvId: val(fd,'resvId'), memo: val(fd,'memo'), rainPlan: val(fd,'rainPlan'), kidTitle: val(fd,'kidTitle'), kidNote: val(fd,'kidNote') };
+    const data = { date, start, end: val(fd,'end'), title: val(fd,'title'), confirmed: fd.get('confirmed') === 'on', place: val(fd,'place'), address: val(fd,'address'), url: val(fd,'url'), mapUrl: val(fd,'mapUrl'), resvId: val(fd,'resvId'), memo: val(fd,'memo'), rainPlan: val(fd,'rainPlan'), kidTitle: val(fd,'kidTitle'), kidNote: val(fd,'kidNote') };
     data.order = (old && old.date === date && (old.start || '') === start && old.order != null) ? old.order : placeOrder(date, start, id);
     if (id) fire(updateDoc(evRef(id), data)); else fire(setDoc(doc(evCol()), data));
     closeModal(); toast('保存しました');
@@ -686,7 +684,7 @@ const H = {
   delCand(d) { closeModal(); fire(deleteDoc(cdRef(d.id))); toast('削除しました'); },
   candToEv(d) {
     const t = curTrip(); const c = S.cands.find(x => x.id === d.id); const date = c.date || t.start;
-    fire(setDoc(doc(evCol()), { date, start:'', end:'', title: c.name, type:'sight', confirmed:false, place: c.name, address:'', url: c.url || '', mapUrl: c.mapUrl || '', resvId:'', memo: c.memo || '', rainPlan:'', kidTitle:'', kidNote:'', order: placeOrder(date, '') }));
+    fire(setDoc(doc(evCol()), { date, start:'', end:'', title: c.name, confirmed:false, place: c.name, address:'', url: c.url || '', mapUrl: c.mapUrl || '', resvId:'', memo: c.memo || '', rainPlan:'', kidTitle:'', kidNote:'', order: placeOrder(date, '') }));
     fire(updateDoc(cdRef(c.id), { status: 'adopt' })); toast(`${fmtD(date)}の予定に追加しました(時刻は未確定)`);
   },
   addResv() { resvForm(null); },
