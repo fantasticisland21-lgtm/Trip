@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="家族旅行">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#e8590c">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<title>家族旅行ノート</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#222;--sub:#6b6b6b;--main:#e8590c;--main2:#fff1e6;--line:#e3ded4;--ok:#2b8a3e;--ng:#c92a2a;--r:14px}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;padding-bottom:calc(env(safe-area-inset-bottom) + 30px)}
+button,input,select,textarea{font:inherit;color:inherit}
+h1{font-size:20px;margin:0}
+h2{font-size:17px;margin:0}
+a{color:#1c7ed6}
+.center{text-align:center;padding:60px 20px;color:var(--sub)}
+header.top{position:sticky;top:0;z-index:5;background:var(--main);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:8px}
+header.top .ttl{font-weight:700;font-size:18px;flex:1;white-space:nowrap}
+header.top .who{font-size:12px;opacity:.9;max-width:40vw;display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-radius:10px;padding:8px 12px}
+#offline{display:none;background:#fff3bf;color:#5f3b00;padding:8px 14px;font-size:14px;text-align:center}
+#offline.show{display:block}
+.wrap{display:grid;grid-template-columns:1fr;max-width:1100px;margin:0 auto}
+.wrap.has-trip .side{display:none}
+.wrap:not(.has-trip) .main{display:none}
+.side,.main{padding:12px 14px}
+@media(min-width:600px){header.top .who{display:block}}
+@media(min-width:900px){
+  .wrap{grid-template-columns:340px 1fr}
+  .wrap.has-trip .side,.wrap:not(.has-trip) .main{display:block}
+  .back{display:none!important}
+  .side{border-right:1px solid var(--line);min-height:calc(100vh - 60px)}
+}
+.empty{color:var(--sub);text-align:center;padding:60px 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin:10px 0}
+.card.tcard{cursor:pointer}
+.card.tcard.cur{border-color:var(--main);box-shadow:0 0 0 2px var(--main2)}
+.sub{color:var(--sub);font-size:14px}
+.btn{background:var(--main);color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:700;min-height:44px}
+.btn.ghost{background:#fff;color:var(--main);border:1px solid var(--main)}
+.btn.ng{background:var(--ng)}
+.btn.block{display:block;width:100%}
+.mini{background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 12px;min-height:36px}
+.mini:disabled{opacity:.35}
+.mini.ng{color:var(--ng);border-color:#f3b4b4}
+.tag{display:inline-block;background:var(--main2);color:#a33d05;border-radius:8px;padding:0 8px;font-size:13px;margin-right:4px}
+.tag.warn{background:#fff3bf;color:#5f3b00}
+.tag.ok{background:#d3f9d8;color:#1d6a2c}
+.tag.gray{background:#eee;color:#555}
+.dhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.back{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;white-space:nowrap}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:8px -14px;padding:0 14px 6px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
+.tabs button{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;padding:8px 16px;min-height:40px}
+.tabs button.on{background:var(--main);border-color:var(--main);color:#fff;font-weight:700}
+.note{background:#e7f5ff;color:#1864ab;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}
+.seg{display:flex;border:1px solid var(--main);border-radius:12px;overflow:hidden}
+.seg button{background:#fff;border:0;padding:8px 12px;color:var(--main);min-height:40px}
+.seg button.on{background:var(--main);color:#fff;font-weight:700}
+.dayh{display:flex;justify-content:space-between;align-items:center;margin:18px 0 6px;padding-bottom:4px;border-bottom:2px solid var(--main)}
+.dayh h2 span{color:var(--main)}
+.ev{display:flex;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin:8px 0}
+.ev.tbd{border-style:dashed;background:#fffdf5}
+.etime{flex:0 0 66px;font-size:20px;font-weight:700;line-height:1.2}
+.etime small{display:block;font-size:12px;font-weight:400;color:var(--sub)}
+.ebody{flex:1;min-width:0}
+.ett{font-weight:700;word-break:break-word}
+.memo{background:#f8f9fa;border-radius:8px;padding:4px 8px;margin-top:4px;font-size:14px;white-space:pre-wrap}
+.rain{color:#1864ab;font-size:14px;margin-top:4px}
+.eact{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.links a{margin-right:12px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.grid .ev{margin:0;flex-direction:column;gap:2px}
+.grid .etime{flex:none;font-size:18px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:8px 0}
+.cal .h{text-align:center;font-size:12px;color:var(--sub)}
+.cal button{min-height:54px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:2px;font-size:14px}
+.cal button.out{background:transparent;border-color:transparent;color:#bbb}
+.cal button.trip{background:var(--main2)}
+.cal button.sel{border:2px solid var(--main);font-weight:700}
+.cal .cnt{display:block;font-size:11px;color:var(--main)}
+.calnav{display:flex;justify-content:space-between;align-items:center}
+label.f{display:block;margin:10px 0 2px;font-size:14px;color:var(--sub)}
+input[type=text],input[type=email],input[type=password],input[type=url],input[type=date],input[type=time],input[type=number],input[type=datetime-local],select,textarea{width:100%;padding:10px;border:1px solid #cfc9bd;border-radius:10px;background:#fff;font-size:16px;min-height:44px}
+textarea{min-height:70px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:16px}
+.chk input{width:22px;height:22px}
+.mback{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.msheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 20px)}
+@media(min-width:700px){.mback{align-items:center}.msheet{border-radius:18px}}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.mh button{background:#eee;border:0;border-radius:50%;width:36px;height:36px;font-size:18px}
+.mact{display:flex;gap:8px;margin-top:16px}
+.mact .btn{flex:1}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:24px;z-index:40;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center;font-size:14px}
+#toast.show{opacity:1}
+#toast.ng{background:var(--ng)}
+.auth{max-width:420px;margin:40px auto;padding:0 18px}
+.auth h1{text-align:center;margin-bottom:6px}
+.err{color:var(--ng);font-size:14px;margin-top:8px;min-height:20px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.opts .chk{margin:4px 0;font-size:15px}
+/* ---- しおり ---- */
+.sheetwrap{margin-top:10px}
+.page{background:#fff;border:2px solid #222;border-radius:12px;padding:16px;margin:14px 0;color:#000}
+.stitle{font-size:30px;font-weight:800;text-align:center;line-height:1.4;margin:10px 0}
+.sinfo{font-size:19px;text-align:center;margin:4px 0}
+.sbox{border:2px solid #000;border-radius:10px;padding:8px 12px;margin:14px 0;font-size:18px}
+.sbox b{display:block;margin-bottom:2px}
+.sday{font-size:24px;font-weight:800;border-bottom:4px solid #000;padding-bottom:4px;margin:0 0 10px}
+.sday span{background:#000;color:#fff;border-radius:8px;padding:0 10px;margin-right:8px}
+.sc{display:flex;gap:10px;align-items:flex-start;border:2px solid #000;border-radius:12px;padding:10px;margin:10px 0;break-inside:avoid;page-break-inside:avoid}
+.snum{flex:0 0 36px;height:36px;border-radius:50%;border:3px solid #000;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center}
+.stime{flex:0 0 92px;font-size:30px;font-weight:800;line-height:1.1}
+.stime small{display:block;font-size:14px;font-weight:600}
+.sbody{flex:1;min-width:0;font-size:20px;font-weight:700;word-break:break-word}
+.sbody .snote{font-weight:400;font-size:17px;margin-top:2px}
+.sbody .smeta{font-weight:400;font-size:14px;margin-top:2px}
+.tbdlabel{border:2px dashed #000;border-radius:6px;padding:0 6px;font-size:15px}
+rt{font-size:.55em}
+.sempty{font-size:18px;text-align:center;padding:20px}
+@media(max-width:480px){.stime{flex-basis:74px;font-size:26px}.stitle{font-size:26px}}
+@media print{
+  @page{margin:12mm}
+  body{background:#fff;padding:0}
+  .noprint,header.top,.side,.tabs,.dhead,#toast,#offline,#modal,.note{display:none!important}
+  .wrap{display:block;max-width:none}
+  .main{display:block!important;padding:0}
+  .sheetwrap{margin:0}
+  .page{border:none;border-radius:0;padding:0;margin:0;break-after:page;page-break-after:always}
+  .page:last-child{break-after:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+<div id="offline">オフラインです。つながると自動で保存されます</div>
+<div id="app"><div class="center">読みこみ中…</div></div>
+<div id="modal"></div>
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot, query, where, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCD_oEF8i01mfxVVg09QCp2xpcIgmCmLMI",
+  authDomain: "trip-2b366.firebaseapp.com",
+  projectId: "trip-2b366",
+  storageBucket: "trip-2b366.firebasestorage.app",
+  messagingSenderId: "46588245854",
+  appId: "1:46588245854:web:2a485019ac623d11af81cf"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+let db;
+try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch (e) { db = getFirestore(fbApp); }
+
+/* ================= 共通 ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TYPES = { sight:['観光','🎡'], move:['移動','🚃'], meal:['食事','🍽️'], rest:['休憩','☕'], stay:['宿泊','🏨'], other:['その他','⭐'] };
+const WD = ['日','月','火','水','木','金','土'];
+const pad = n => String(n).padStart(2,'0');
+const pd = s => new Date(s + 'T00:00:00');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addDays = (s,n) => { const d = pd(s); d.setDate(d.getDate()+n); return ymd(d); };
+const diffDays = (a,b) => Math.round((pd(b) - pd(a)) / 86400000);
+const fmtD = s => { if (!s) return ''; const d = pd(s); return `${d.getMonth()+1}月${d.getDate()}日(${WD[d.getDay()]})`; };
+const rangeDays = (a,b) => { const r = []; if (!a || !b) return r; const n = Math.min(diffDays(a,b), 60); for (let i = 0; i <= n; i++) r.push(addDays(a,i)); return r; };
+const today = () => ymd(new Date());
+const tt = t => String(t || '').replace(/^0/, '');
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
+const mapLink = e => safeUrl(e.mapUrl) || ((e.address || e.place) ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(e.address || e.place) : '');
+const aLink = (u, label) => u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${label}</a>` : '';
+const parseEmails = s => [...new Set(String(s || '').split(/[\s,、;]+/).map(x => x.trim().toLowerCase()).filter(x => /^\S+@\S+\.\S+$/.test(x)))];
+const val = (fd,k) => String(fd.get(k) ?? '').trim();
+
+function toast(msg, ng) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (ng ? ' ng' : '');
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.className = ''; }, ng ? 6000 : 2500);
+}
+// 書きこみは送信を待たずに画面へ反映される。失敗したときだけ知らせる。
+const fire = p => Promise.resolve(p).catch(e => toast('保存できませんでした(' + (e.code || e.message) + ')', true));
+
+const S = {
+  ready:false, user:null, email:'', authMode:'login', authErr:'',
+  trips:[], tripMap:{parents:[], viewers:[]}, tripId:null,
+  tab:'schedule', view:'timeline', calSel:null, calMonth:null,
+  events:[], cands:[], resvs:[],
+  unTrips:[], unSub:[],
+  sh:{ ruby:true, place:true, map:false, url:false, rain:false, memo:false, resv:false, resvNo:false, notice:true, people:true }
+};
+const curTrip = () => S.trips.find(t => t.id === S.tripId);
+const isParent = t => !!t && (t.parents || []).includes(S.email);
+const evCol = () => collection(db,'trips',S.tripId,'events');
+const evRef = id => doc(db,'trips',S.tripId,'events',id);
+const cdRef = id => doc(db,'trips',S.tripId,'candidates',id);
+const rvRef = id => doc(db,'trips',S.tripId,'reservations',id);
+
+/* ふりがな: 「漢字{かんじ}」と書くと、しおりでふりがなが付く */
+const ruby = (text, on) => esc(text).replace(/([一-鿿々〆ヶ]+)\{([^{}]+)\}/g, on ? '<ruby>$1<rt>$2</rt></ruby>' : '$1').replace(/[{}]/g, '');
+
+/* ================= 認証 ================= */
+const AUTHERR = {
+  'auth/invalid-email':'メールアドレスの形がちがいます',
+  'auth/invalid-credential':'メールアドレスかパスワードがちがいます',
+  'auth/user-not-found':'このメールアドレスは登録されていません',
+  'auth/wrong-password':'パスワードがちがいます',
+  'auth/email-already-in-use':'このメールアドレスはもう登録されています。「ログイン」からどうぞ',
+  'auth/weak-password':'パスワードは6文字以上にしてください',
+  'auth/network-request-failed':'通信できません。電波を確認してください',
+  'auth/too-many-requests':'しばらくたってから、もう一度ためしてください',
+  'auth/unauthorized-domain':'このサイトのアドレスがFirebaseに登録されていません(手順の「認証ドメイン」を確認)',
+  'auth/operation-not-allowed':'Firebaseで「メール/パスワード」がオンになっていません'
+};
+onAuthStateChanged(auth, u => {
+  S.ready = true; S.user = u; S.email = (u && u.email || '').toLowerCase();
+  if (u) subscribeTrips(); else { unsubTrips(); unsubTrip(); S.trips = []; S.tripId = null; }
+  render();
+});
+
+/* ================= データ購読 ================= */
+function unsubTrips() { S.unTrips.forEach(f => f()); S.unTrips = []; }
+function unsubTrip() { S.unSub.forEach(f => f()); S.unSub = []; }
+function subscribeTrips() {
+  unsubTrips(); S.tripMap = {parents:[], viewers:[]};
+  for (const role of ['parents','viewers']) {
+    const q = query(collection(db,'trips'), where(role,'array-contains',S.email));
+    S.unTrips.push(onSnapshot(q, snap => {
+      S.tripMap[role] = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      const m = new Map(); [...S.tripMap.viewers, ...S.tripMap.parents].forEach(t => m.set(t.id, t));
+      S.trips = [...m.values()].sort((a,b) => (a.start || '').localeCompare(b.start || ''));
+      if (S.tripId && !m.has(S.tripId)) { unsubTrip(); S.tripId = null; }
+      render();
+    }, err => toast('旅行を読みこめません(' + err.code + ')', true)));
+  }
+}
+function openTrip(id) {
+  unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.calSel = null; S.calMonth = null;
+  for (const [k,name] of [['events','events'],['cands','candidates'],['resvs','reservations']]) {
+    S.unSub.push(onSnapshot(collection(db,'trips',id,name), snap => {
+      S[k] = snap.docs.map(d => ({ id:d.id, ...d.data() })); render();
+    }, err => toast('読みこめません(' + err.code + ')', true)));
+  }
+  render(); window.scrollTo(0,0);
+}
+function closeTrip() { unsubTrip(); S.tripId = null; render(); window.scrollTo(0,0); }
+
+/* ================= 予定の並び ================= */
+const dayEvents = date => S.events.filter(e => e.date === date).sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || String(a.start||'').localeCompare(String(b.start||'')));
+function allDays(t) {
+  const set = new Set(rangeDays(t.start, t.end)); S.events.forEach(e => e.date && set.add(e.date));
+  return [...set].sort();
+}
+function placeOrder(date, start, exId) {
+  const list = dayEvents(date).filter(x => x.id !== exId);
+  if (start) {
+    const k = list.findIndex(x => x.start && x.start > start);
+    if (k >= 0) { const hi = list[k].order ?? 0; const lo = k > 0 ? (list[k-1].order ?? hi - 2000) : hi - 2000; return (lo + hi) / 2; }
+  }
+  return list.length ? Math.max(...list.map(x => x.order ?? 0)) + 1000 : Date.now();
+}
+function moveEv(id, dir) {
+  const e = S.events.find(x => x.id === id); if (!e) return;
+  const list = dayEvents(e.date); const i = list.findIndex(x => x.id === id); const j = i + dir;
+  if (j < 0 || j >= list.length) return;
+  const a = list[i], b = list[j]; const oa = a.order ?? 0, ob = b.order ?? 0;
+  if (oa === ob) fire(updateDoc(evRef(a.id), { order: oa + (dir > 0 ? 1 : -1) * 0.5 }));
+  else { fire(updateDoc(evRef(a.id), { order: ob })); fire(updateDoc(evRef(b.id), { order: oa })); }
+}
+function sortDay(date) {
+  const list = dayEvents(date).slice().sort((a,b) => (a.start ? 0 : 1) - (b.start ? 0 : 1) || String(a.start||'').localeCompare(String(b.start||'')));
+  const b = writeBatch(db); list.forEach((e,i) => b.update(evRef(e.id), { order: (i + 1) * 1000 }));
+  fire(b.commit()); toast('時刻の順に並べました');
+}
+
+/* ================= 画面 ================= */
+function render() {
+  const app = $('#app');
+  if (!S.ready) { app.innerHTML = '<div class="center">読みこみ中…</div>'; return; }
+  if (!S.user) { app.innerHTML = authHTML(); return; }
+  const t = curTrip();
+  app.innerHTML = `<header class="top"><div class="ttl">✈️ 家族旅行ノート</div><div class="who">${esc(S.email)}</div><button data-a="logout">ログアウト</button></header>
+  <div class="wrap ${t ? 'has-trip' : ''}"><aside class="side">${listHTML()}</aside><main class="main">${t ? detailHTML(t) : '<div class="empty">左の一覧から旅行をえらんでください</div>'}</main></div>`;
+}
+
+function authHTML() {
+  const login = S.authMode === 'login';
+  return `<div class="auth"><h1>✈️ 家族旅行ノート</h1><p class="sub" style="text-align:center">家族だけで使う旅行の計画アプリ</p>
+  <div class="card"><form data-f="auth">
+   <label class="f">メールアドレス</label><input type="email" name="email" autocomplete="email" required>
+   <label class="f">パスワード(6文字以上)</label><input type="password" name="pw" autocomplete="${login ? 'current-password' : 'new-password'}" required minlength="6">
+   <div class="err">${esc(S.authErr)}</div>
+   <button class="btn block" type="submit">${login ? 'ログイン' : '新しく登録する'}</button>
+  </form>
+  <p style="text-align:center;margin:14px 0 0"><button class="mini" data-a="authMode">${login ? '初めての人は「新規登録」' : 'もう登録した人は「ログイン」'}</button></p>
+  ${login ? '<p style="text-align:center;margin:8px 0 0"><button class="mini" data-a="resetPw">パスワードを忘れたとき</button></p>' : ''}
+  </div></div>`;
+}
+
+function listHTML() {
+  const td = today();
+  const now = S.trips.filter(t => (t.end || t.start || '') >= td), past = S.trips.filter(t => (t.end || t.start || '') < td);
+  const card = t => `<div class="card tcard ${t.id === S.tripId ? 'cur' : ''}" data-a="openTrip" data-id="${t.id}">
+    <h2>${esc(t.name)}</h2><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + esc(t.dest) : ''}</div>
+    <div style="margin-top:6px"><span class="tag ${isParent(t) ? '' : 'gray'}">${isParent(t) ? '保護者(編集できる)' : '見るだけ'}</span>${t.people ? `<span class="sub">${esc(t.people)}</span>` : ''}</div>
+    ${isParent(t) ? `<div class="eact"><button class="mini" data-a="dupTrip" data-id="${t.id}">複製</button><button class="mini ng" data-a="delTrip" data-id="${t.id}">削除</button></div>` : ''}</div>`;
+  return `<div class="bar"><h2>旅行の一覧</h2><button class="btn" data-a="newTrip">＋新しい旅行</button></div>
+   ${now.length ? now.map(card).join('') : '<div class="empty">まだ旅行がありません。<br>「＋新しい旅行」から作りましょう</div>'}
+   ${past.length ? `<h2 style="margin-top:22px">過去の旅行</h2>${past.map(card).join('')}` : ''}`;
+}
+
+function detailHTML(t) {
+  const par = isParent(t);
+  const tabs = [['schedule','予定'],['cands','行き先候補'],['resv','予約'],['shiori','しおり'],['settings','設定']];
+  const body = S.tab === 'schedule' ? scheduleHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
+  return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><h1>${esc(t.name)}</h1><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + esc(t.dest) : ''}</div></div></div>
+  <nav class="tabs">${tabs.map(([k,l]) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}">${l}</button>`).join('')}</nav>
+  ${par ? '' : '<div class="note">この旅行は「見るだけ」です(変更は保護者のアカウントでできます)</div>'}
+  ${body}`;
+}
+
+/* ---- 予定 ---- */
+function scheduleHTML(t, par) {
+  const days = allDays(t);
+  let h = `<div class="bar"><div class="seg">${[['timeline','時間'],['calendar','カレンダー'],['cards','カード']].map(([v,l]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}">${l}</button>`).join('')}</div>${par ? '<button class="btn" data-a="addEv">＋予定</button>' : ''}</div>`;
+  if (S.view === 'calendar') return h + calHTML(t, days, par);
+  return h + days.map((d,i) => dayHTML(d, i, par, S.view === 'cards')).join('');
+}
+function dayHTML(date, i, par, cards) {
+  const list = dayEvents(date);
+  return `<div class="dayh"><h2><span>${i + 1}日め</span> ${fmtD(date)}</h2><div>${par && list.length > 1 ? `<button class="mini" data-a="sortDay" data-d="${date}">時刻順</button> ` : ''}${par ? `<button class="mini" data-a="addEv" data-d="${date}">＋</button>` : ''}</div></div>
+   ${list.length ? `<div class="${cards ? 'grid' : ''}">${list.map((e,k) => evHTML(e, k, list.length, par)).join('')}</div>` : '<div class="sub" style="padding:6px">予定はまだありません</div>'}`;
+}
+function evHTML(e, i, n, par) {
+  const [tl, ic] = TYPES[e.type] || TYPES.other; const rv = S.resvs.find(r => r.id === e.resvId);
+  const links = [aLink(safeUrl(e.url), '公式サイト'), aLink(mapLink(e), '地図')].join('');
+  return `<div class="ev ${e.confirmed === false ? 'tbd' : ''}">
+   <div class="etime">${e.start ? esc(tt(e.start)) : '--:--'}${e.end ? `<small>〜${esc(tt(e.end))}</small>` : ''}</div>
+   <div class="ebody"><div class="ett"><span class="tag">${ic} ${tl}</span>${esc(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}</div>
+   ${e.place ? `<div class="sub">📍 ${esc(e.place)}${e.address ? '(' + esc(e.address) + ')' : ''}</div>` : (e.address ? `<div class="sub">📍 ${esc(e.address)}</div>` : '')}
+   ${rv ? `<div class="sub">🎫 ${esc(rv.target)}</div>` : ''}
+   ${links ? `<div class="links">${links}</div>` : ''}
+   ${e.memo ? `<div class="memo">${esc(e.memo)}</div>` : ''}
+   ${e.rainPlan ? `<div class="rain">☔ 雨の日: ${esc(e.rainPlan)}</div>` : ''}
+   ${par ? `<div class="eact"><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="1" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="mini" data-a="editEv" data-id="${e.id}">編集</button><button class="mini" data-a="dupEv" data-id="${e.id}">複製</button></div>` : ''}
+   </div></div>`;
+}
+function calHTML(t, days, par) {
+  const sel = S.calSel || days[0] || today(); const m = S.calMonth || sel.slice(0,7);
+  const [Y, M] = m.split('-').map(Number); const first = new Date(Y, M-1, 1).getDay(); const last = new Date(Y, M, 0).getDate();
+  const tripDays = new Set(days); let cells = '';
+  for (let i = 0; i < first; i++) cells += '<button class="out" disabled></button>';
+  for (let d = 1; d <= last; d++) {
+    const ds = `${Y}-${pad(M)}-${d < 10 ? '0' + d : d}`; const c = S.events.filter(e => e.date === ds).length;
+    cells += `<button class="${tripDays.has(ds) ? 'trip' : ''} ${ds === sel ? 'sel' : ''}" data-a="calSel" data-d="${ds}">${d}${c ? `<span class="cnt">${c}件</span>` : ''}</button>`;
+  }
+  const nav = n => { const d = new Date(Y, M-1+n, 1); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; };
+  const idx = days.indexOf(sel);
+  return `<div class="calnav"><button class="mini" data-a="calMonth" data-m="${nav(-1)}">‹</button><h2>${Y}年${M}月</h2><button class="mini" data-a="calMonth" data-m="${nav(1)}">›</button></div>
+   <div class="cal">${WD.map(w => `<div class="h">${w}</div>`).join('')}${cells}</div>
+   ${dayHTML(sel, Math.max(idx, 0), par, false)}`;
+}
+
+/* ---- 行き先候補 ---- */
+const CST = { consider:'検討中', adopt:'採用', skip:'見送り' };
+function candsHTML(par) {
+  const list = S.cands.slice().sort((a,b) => Object.keys(CST).indexOf(a.status || 'consider') - Object.keys(CST).indexOf(b.status || 'consider') || String(a.name).localeCompare(String(b.name), 'ja'));
+  return `<div class="bar"><h2>行き先・施設の候補</h2>${par ? '<button class="btn" data-a="addCand">＋候補</button>' : ''}</div>
+   <div class="sub">まだ予定に入れていない行き先をためておく場所です</div>
+   ${list.length ? list.map(c => `<div class="card"><div class="ett"><span class="tag ${c.status === 'adopt' ? 'ok' : c.status === 'skip' ? 'gray' : ''}">${CST[c.status || 'consider']}</span>${esc(c.name)}</div>
+    ${c.date ? `<div class="sub">行きたい日: ${fmtD(c.date)}</div>` : ''}
+    <div class="links">${aLink(safeUrl(c.url), '公式サイト')}${aLink(safeUrl(c.mapUrl), '地図')}</div>
+    ${c.memo ? `<div class="memo">${esc(c.memo)}</div>` : ''}
+    ${par ? `<div class="eact"><button class="mini" data-a="candToEv" data-id="${c.id}">予定に追加</button><button class="mini" data-a="editCand" data-id="${c.id}">編集</button></div>` : ''}</div>`).join('') : '<div class="empty">候補はまだありません</div>'}`;
+}
+
+/* ---- 予約 ---- */
+function resvHTML(par) {
+  const list = S.resvs.slice().sort((a,b) => String(a.useAt || '').localeCompare(String(b.useAt || '')));
+  return `<div class="bar"><h2>予約の情報</h2>${par ? '<button class="btn" data-a="addResv">＋予約</button>' : ''}</div>
+   <div class="sub">宿・乗り物・チケット・お店など。予約番号はしおりに自動では載りません</div>
+   ${list.length ? list.map(r => `<div class="card"><div class="ett">🎫 ${esc(r.target)}</div>
+    <div class="sub">${r.vendor ? '予約先: ' + esc(r.vendor) + '<br>' : ''}${r.useAt ? '利用日時: ' + esc(String(r.useAt).replace('T',' ')) + '<br>' : ''}${r.reservedOn ? '予約した日: ' + fmtD(r.reservedOn) + '<br>' : ''}${r.number ? '予約番号: <b>' + esc(r.number) + '</b>' : ''}</div>
+    <div class="links">${aLink(safeUrl(r.url), '予約サイト')}</div>
+    ${r.memo ? `<div class="memo">${esc(r.memo)}</div>` : ''}
+    ${par ? `<div class="eact"><button class="mini" data-a="editResv" data-id="${r.id}">編集</button></div>` : ''}</div>`).join('') : '<div class="empty">予約はまだありません</div>'}`;
+}
+
+/* ---- 設定 ---- */
+function settingsHTML(t, par) {
+  return `<div class="card"><h2>基本情報</h2>
+   <div class="sub" style="margin-top:6px">参加者: ${esc(t.people || '-')}<br>行き先: ${esc(t.dest || '-')}</div>
+   ${t.notice ? `<div class="memo">家族への連絡事項:\n${esc(t.notice)}</div>` : ''}${t.memo ? `<div class="memo">${esc(t.memo)}</div>` : ''}
+   ${par ? '<div class="eact"><button class="mini" data-a="editTrip">基本情報・家族の設定を編集</button></div>' : ''}</div>
+   <div class="card"><h2>家族のメンバー</h2>
+    <div class="sub" style="margin-top:6px"><b>保護者(編集できる)</b><br>${(t.parents || []).map(esc).join('<br>') || '-'}</div>
+    <div class="sub" style="margin-top:6px"><b>見るだけ</b><br>${(t.viewers || []).map(esc).join('<br>') || '-'}</div></div>
+   <div class="card"><h2>データのバックアップ</h2><div class="sub">この旅行の中身をファイルに書き出します</div>
+    <div class="eact"><button class="mini" data-a="exportJson">書き出す(JSON)</button></div></div>
+   ${par ? `<div class="card"><h2>旅行の削除</h2><div class="eact"><button class="mini ng" data-a="delTrip" data-id="${t.id}">この旅行を削除</button></div></div>` : ''}`;
+}
+
+/* ---- しおり ---- */
+function shioriHTML(t) {
+  const o = S.sh; const R = s => ruby(s, o.ruby);
+  const opt = (k, label) => `<label class="chk"><input type="checkbox" data-opt="${k}" ${o[k] ? 'checked' : ''}>${label}</label>`;
+  const days = allDays(t);
+  let pages = `<section class="page"><div class="stitle">${R(t.name)}</div>
+    <div class="sinfo">📅 ${fmtD(t.start)} 〜 ${fmtD(t.end)}</div>
+    ${t.dest ? `<div class="sinfo">📍 ${R(t.dest)}</div>` : ''}
+    ${o.people && t.people ? `<div class="sinfo">👪 ${R(t.people)}</div>` : ''}
+    ${o.notice && t.notice ? `<div class="sbox"><b>みんなへのれんらく</b>${R(t.notice).replace(/\n/g, '<br>')}</div>` : ''}</section>`;
+  days.forEach((d,i) => {
+    const list = dayEvents(d);
+    pages += `<section class="page"><div class="sday"><span>${i + 1}日め</span>${fmtD(d)}</div>` + (list.length ? list.map((e,k) => {
+      const [tl, ic] = TYPES[e.type] || TYPES.other; const tbd = e.confirmed === false;
+      const time = tbd ? '<span class="tbdlabel">みてい</span>' : (e.start ? esc(tt(e.start)) + (e.end ? `<small>〜${esc(tt(e.end))}</small>` : '') : '');
+      const place = o.place && e.place ? `<div class="smeta">📍 ${R(e.place)}${e.address ? ' (' + esc(e.address) + ')' : ''}</div>` : '';
+      const map = o.map && mapLink(e) ? `<div class="smeta">地図: ${aLink(mapLink(e), esc(mapLink(e)))}</div>` : '';
+      const url = o.url && safeUrl(e.url) ? `<div class="smeta">サイト: ${aLink(safeUrl(e.url), esc(e.url))}</div>` : '';
+      const rain = o.rain && e.rainPlan ? `<div class="smeta">☔ あめのときは: ${R(e.rainPlan)}</div>` : '';
+      const memo = o.memo && e.memo ? `<div class="smeta">${esc(e.memo)}</div>` : '';
+      return `<div class="sc"><div class="snum">${k + 1}</div><div class="stime">${time}</div><div class="sbody">${ic} ${R(e.kidTitle || e.title)}${e.kidNote ? `<div class="snote">${R(e.kidNote)}</div>` : ''}${place}${map}${url}${rain}${memo}</div></div>`;
+    }).join('') : '<div class="sempty">この日の予定は まだありません</div>') + '</section>';
+  });
+  if (o.resv && S.resvs.length) {
+    pages += `<section class="page"><div class="sday"><span>🎫</span>よやくのメモ</div>` + S.resvs.slice().sort((a,b) => String(a.useAt||'').localeCompare(String(b.useAt||''))).map(r => `<div class="sc"><div class="sbody">${esc(r.target)}<div class="smeta">${r.vendor ? esc(r.vendor) + ' ' : ''}${r.useAt ? esc(String(r.useAt).replace('T',' ')) : ''}${o.resvNo && r.number ? '<br>よやく番号: ' + esc(r.number) : ''}</div></div></div>`).join('') + '</section>';
+  }
+  return `<div class="noprint"><div class="card"><h2>しおりに のせるもの</h2>
+    <div class="sub">登録した予定をもとに、子ども向けのしおりを作ります。予算や予約番号などは、初期設定ではのりません。</div>
+    <div class="opts">${opt('ruby','ふりがな')}${opt('people','参加者')}${opt('notice','連絡事項')}${opt('place','場所・住所')}${opt('map','地図リンク')}${opt('url','公式サイト')}${opt('rain','雨の日の予定')}${opt('memo','メモ(大人向け)')}${opt('resv','予約のメモ')}${opt('resvNo','予約番号も入れる')}</div>
+    <div class="sub" style="margin-top:6px">ふりがなは、予定名などを「東京{とうきょう}」のように書いておくと付きます。予定の入力画面の「しおり用の名前」でやさしい言葉にも直せます。</div>
+    <div class="mact"><button class="btn" data-a="print">印刷・PDFにする</button></div>
+    <div class="sub" style="margin-top:6px">押したあと、画面下の共有ボタン(□に↑)の「プリント」→ 画面をピンチアウトすると、PDFとして保存・共有できます。</div></div>
+    <h2>プレビュー</h2></div><div class="sheetwrap">${pages}</div>`;
+}
+
+/* ================= モーダル ================= */
+function openModal(title, body) {
+  $('#modal').innerHTML = `<div class="mback" data-a="mclose"><div class="msheet"><div class="mh"><h2>${esc(title)}</h2><button type="button" data-a="mclose">✕</button></div>${body}</div></div>`;
+}
+function closeModal() { $('#modal').innerHTML = ''; }
+const inp = (name, label, v, type = 'text', extra = '') => `<label class="f">${label}</label><input type="${type}" name="${name}" value="${esc(v)}" ${extra}>`;
+const area = (name, label, v) => `<label class="f">${label}</label><textarea name="${name}">${esc(v)}</textarea>`;
+const acts = (okLabel, extra = '') => `<div class="mact">${extra}<button class="btn" type="submit">${okLabel}</button></div>`;
+
+function tripForm(t, mode) {
+  const n = !t;
+  const d = t || { name:'USJ家族旅行', dest:'ユニバーサル・スタジオ・ジャパン', start:'', end:'', people:'大人2人・子ども2人', notice:'', memo:'', parents:[S.email], viewers:[] };
+  openModal(n ? '新しい旅行' : '基本情報を編集', `<form data-f="trip" data-id="${n ? '' : t.id}">
+   ${inp('name','旅行名',d.name,'text','required')}${inp('dest','行き先',d.dest)}
+   <div class="row2">${inp('start','出発日',d.start,'date','required')}${inp('end','帰宅日',d.end,'date','required')}</div>
+   ${inp('people','参加者',d.people)}
+   ${area('notice','家族への連絡事項(しおりにのります)',d.notice)}
+   ${area('memo','メモ(大人向け)',d.memo)}
+   ${area('parents','保護者のメールアドレス(編集できる人)。複数は改行で',(d.parents || []).join('\n'))}
+   ${area('viewers','見るだけの人のメールアドレス(子どもなど)',(d.viewers || []).join('\n'))}
+   <div class="sub">家族はそれぞれ、ここに書いたメールアドレスでログイン(新規登録)すると、同じ旅行が見られます。</div>
+   ${acts(n ? '作成する' : '保存する')}</form>`);
+}
+
+function dayOptions(t, sel) { return allDays(t).map(d => `<option value="${d}" ${d === sel ? 'selected' : ''}>${fmtD(d)}</option>`).join(''); }
+function evForm(id, presetDate) {
+  const t = curTrip(); const e = id ? S.events.find(x => x.id === id) : null;
+  const d = e || { date: presetDate || t.start, start:'', end:'', title:'', kidTitle:'', kidNote:'', type:'sight', place:'', address:'', url:'', mapUrl:'', memo:'', rainPlan:'', confirmed:true, resvId:'' };
+  openModal(e ? '予定を編集' : '予定を追加', `<form data-f="ev" data-id="${e ? e.id : ''}">
+   <label class="f">日付(ほかの日に動かすときは変えます)</label><select name="date">${dayOptions(t, d.date)}</select>
+   <div class="row2">${inp('start','開始時刻',d.start,'time')}${inp('end','終了時刻',d.end,'time')}</div>
+   ${inp('title','予定名',d.title,'text','required')}
+   <label class="f">種類</label><select name="type">${Object.entries(TYPES).map(([k,v]) => `<option value="${k}" ${d.type === k ? 'selected' : ''}>${v[1]} ${v[0]}</option>`).join('')}</select>
+   <label class="chk"><input type="checkbox" name="confirmed" ${d.confirmed !== false ? 'checked' : ''}>時刻や内容が決まっている</label>
+   ${inp('place','場所',d.place)}${inp('address','住所',d.address)}
+   ${inp('url','公式サイトのURL',d.url,'url','placeholder="https://"')}${inp('mapUrl','地図のURL(空なら場所から自動で作ります)',d.mapUrl,'url','placeholder="https://"')}
+   <label class="f">関連する予約</label><select name="resvId"><option value="">予約なし</option>${S.resvs.map(r => `<option value="${r.id}" ${d.resvId === r.id ? 'selected' : ''}>${esc(r.target)}</option>`).join('')}</select>
+   ${area('memo','メモ(大人向け)',d.memo)}
+   ${inp('rainPlan','雨の日の代わりの予定',d.rainPlan)}
+   <div class="sub" style="margin-top:12px"><b>しおり用(子ども向け・空ならそのまま使います)</b></div>
+   ${inp('kidTitle','しおり用の名前(やさしい言葉)',d.kidTitle)}${inp('kidNote','しおりに書くひとこと',d.kidNote)}
+   ${acts('保存する', e ? `<button class="btn ng" type="button" data-a="delEv" data-id="${e.id}">削除</button>` : '')}</form>`);
+}
+function candForm(id) {
+  const t = curTrip(); const c = id ? S.cands.find(x => x.id === id) : null;
+  const d = c || { name:'', url:'', mapUrl:'', memo:'', date:'', status:'consider' };
+  openModal(c ? '候補を編集' : '候補を追加', `<form data-f="cand" data-id="${c ? c.id : ''}">
+   ${inp('name','施設名・行き先',d.name,'text','required')}${inp('url','公式サイトのURL',d.url,'url','placeholder="https://"')}${inp('mapUrl','地図のURL',d.mapUrl,'url','placeholder="https://"')}
+   <label class="f">行きたい日(まだなら空で)</label><select name="date"><option value="">未定</option>${dayOptions(t, d.date)}</select>
+   <label class="f">状態</label><select name="status">${Object.entries(CST).map(([k,v]) => `<option value="${k}" ${d.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+   ${area('memo','メモ',d.memo)}
+   ${acts('保存する', c ? `<button class="btn ng" type="button" data-a="delCand" data-id="${c.id}">削除</button>` : '')}</form>`);
+}
+function resvForm(id) {
+  const r = id ? S.resvs.find(x => x.id === id) : null;
+  const d = r || { target:'', vendor:'', reservedOn:'', useAt:'', number:'', url:'', memo:'' };
+  openModal(r ? '予約を編集' : '予約を追加', `<form data-f="resv" data-id="${r ? r.id : ''}">
+   ${inp('target','予約するもの(ホテル・新幹線・チケットなど)',d.target,'text','required')}${inp('vendor','予約先',d.vendor)}
+   ${inp('reservedOn','予約した日',d.reservedOn,'date')}${inp('useAt','利用する日時',d.useAt,'datetime-local')}
+   ${inp('number','予約番号',d.number)}${inp('url','予約サイトのURL',d.url,'url','placeholder="https://"')}${area('memo','メモ',d.memo)}
+   ${acts('保存する', r ? `<button class="btn ng" type="button" data-a="delResv" data-id="${r.id}">削除</button>` : '')}</form>`);
+}
+function confirmModal(title, msg, action, id) {
+  openModal(title, `<p>${esc(msg)}</p><div class="mact"><button class="btn ghost" type="button" data-a="mclose">やめる</button><button class="btn ng" type="button" data-a="${action}" data-id="${id}">削除する</button></div>`);
+}
+
+/* ================= フォーム送信 ================= */
+const submitters = {
+  async auth(fd) {
+    const email = val(fd,'email'), pw = String(fd.get('pw') || ''); S.authErr = '';
+    try { if (S.authMode === 'login') await signInWithEmailAndPassword(auth, email, pw); else await createUserWithEmailAndPassword(auth, email, pw); }
+    catch (e) { S.authErr = AUTHERR[e.code] || ('エラー: ' + (e.code || e.message)); render(); }
+  },
+  trip(fd, f) {
+    const id = f.dataset.id; const start = val(fd,'start'), end = val(fd,'end');
+    if (end < start) return toast('帰宅日は出発日より後にしてください', true);
+    const parents = parseEmails(val(fd,'parents')); if (!parents.includes(S.email)) parents.push(S.email);
+    const viewers = parseEmails(val(fd,'viewers')).filter(x => !parents.includes(x));
+    const data = { name: val(fd,'name'), dest: val(fd,'dest'), start, end, people: val(fd,'people'), notice: val(fd,'notice'), memo: val(fd,'memo'), parents, viewers };
+    if (id) fire(updateDoc(doc(db,'trips',id), data));
+    else { const ref = doc(collection(db,'trips')); fire(setDoc(ref, { ...data, createdBy: S.email, createdAt: serverTimestamp() })); setTimeout(() => openTrip(ref.id), 50); }
+    closeModal(); toast('保存しました');
+  },
+  ev(fd, f) {
+    const id = f.dataset.id; const old = id ? S.events.find(x => x.id === id) : null;
+    const date = val(fd,'date'), start = val(fd,'start');
+    const data = { date, start, end: val(fd,'end'), title: val(fd,'title'), type: val(fd,'type'), confirmed: fd.get('confirmed') === 'on', place: val(fd,'place'), address: val(fd,'address'), url: val(fd,'url'), mapUrl: val(fd,'mapUrl'), resvId: val(fd,'resvId'), memo: val(fd,'memo'), rainPlan: val(fd,'rainPlan'), kidTitle: val(fd,'kidTitle'), kidNote: val(fd,'kidNote') };
+    data.order = (old && old.date === date && (old.start || '') === start && old.order != null) ? old.order : placeOrder(date, start, id);
+    if (id) fire(updateDoc(evRef(id), data)); else fire(setDoc(doc(evCol()), data));
+    closeModal(); toast('保存しました');
+  },
+  cand(fd, f) {
+    const id = f.dataset.id; const data = { name: val(fd,'name'), url: val(fd,'url'), mapUrl: val(fd,'mapUrl'), date: val(fd,'date'), status: val(fd,'status'), memo: val(fd,'memo') };
+    if (id) fire(updateDoc(cdRef(id), data)); else fire(setDoc(doc(collection(db,'trips',S.tripId,'candidates')), data));
+    closeModal(); toast('保存しました');
+  },
+  resv(fd, f) {
+    const id = f.dataset.id; const data = { target: val(fd,'target'), vendor: val(fd,'vendor'), reservedOn: val(fd,'reservedOn'), useAt: val(fd,'useAt'), number: val(fd,'number'), url: val(fd,'url'), memo: val(fd,'memo') };
+    if (id) fire(updateDoc(rvRef(id), data)); else fire(setDoc(doc(collection(db,'trips',S.tripId,'reservations')), data));
+    closeModal(); toast('保存しました');
+  },
+  dup(fd, f) {
+    const id = f.dataset.id; const name = val(fd,'name'), start = val(fd,'start');
+    closeModal(); toast('複製しています…'); duplicateTrip(id, name, start);
+  }
+};
+document.addEventListener('submit', e => { e.preventDefault(); const f = e.target; const fn = submitters[f.dataset.f]; if (fn) fn(new FormData(f), f); });
+
+/* ================= 複製・削除・書き出し ================= */
+async function duplicateTrip(srcId, name, newStart) {
+  try {
+    const src = S.trips.find(t => t.id === srcId); const off = diffDays(src.start, newStart); const dur = diffDays(src.start, src.end);
+    const nref = doc(collection(db,'trips')); const b = writeBatch(db);
+    const parents = [...new Set([...(src.parents || []), S.email])];
+    b.set(nref, { name, dest: src.dest || '', start: newStart, end: addDays(newStart, dur), people: src.people || '', notice: src.notice || '', memo: src.memo || '', parents, viewers: src.viewers || [], createdBy: S.email, createdAt: serverTimestamp() });
+    const [es, cs] = await Promise.all([getDocs(collection(db,'trips',srcId,'events')), getDocs(collection(db,'trips',srcId,'candidates'))]);
+    es.docs.forEach(d => { const x = d.data(); b.set(doc(collection(db,'trips',nref.id,'events')), { ...x, date: addDays(x.date, off), resvId: '' }); });
+    cs.docs.forEach(d => { const x = d.data(); b.set(doc(collection(db,'trips',nref.id,'candidates')), { ...x, date: x.date ? addDays(x.date, off) : '', status: 'consider' }); });
+    await b.commit(); toast('複製しました'); openTrip(nref.id);
+  } catch (e) { toast('複製できませんでした(' + (e.code || e.message) + ')', true); }
+}
+async function deleteTrip(id) {
+  try {
+    toast('削除しています…');
+    for (const n of ['events','candidates','reservations']) {
+      const snap = await getDocs(collection(db,'trips',id,n)); const b = writeBatch(db); snap.docs.forEach(d => b.delete(d.ref)); await b.commit();
+    }
+    await deleteDoc(doc(db,'trips',id));
+    if (S.tripId === id) closeTrip(); toast('削除しました');
+  } catch (e) { toast('削除できませんでした(' + (e.code || e.message) + ')', true); }
+}
+function exportJson() {
+  const t = curTrip(); const strip = o => { const { id, ...r } = o; return { id, ...r }; };
+  const data = { exportedAt: new Date().toISOString(), trip: strip({ ...t, createdAt: undefined }), events: S.events, candidates: S.cands, reservations: S.resvs };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `trip-${t.name}.json`; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ================= クリック処理 ================= */
+const H = {
+  authMode() { S.authMode = S.authMode === 'login' ? 'signup' : 'login'; S.authErr = ''; render(); },
+  async resetPw() {
+    const email = (document.querySelector('input[name=email]') || {}).value;
+    if (!email) return toast('先にメールアドレスを入れてください', true);
+    try { await sendPasswordResetEmail(auth, email); toast('再設定のメールを送りました'); } catch (e) { toast(AUTHERR[e.code] || e.code, true); }
+  },
+  logout() { signOut(auth); },
+  openTrip(d) { openTrip(d.id); },
+  closeTrip() { closeTrip(); },
+  newTrip() { tripForm(null); },
+  editTrip() { tripForm(curTrip()); },
+  dupTrip(d) {
+    const t = S.trips.find(x => x.id === d.id);
+    openModal('旅行を複製', `<form data-f="dup" data-id="${t.id}"><div class="sub">予定と行き先候補をコピーします(予約はコピーしません)。日付は新しい出発日に合わせてずらします。</div>
+     ${inp('name','新しい旅行名', t.name + '(コピー)','text','required')}${inp('start','新しい出発日','', 'date','required')}${acts('複製する')}</form>`);
+  },
+  delTrip(d) { const t = S.trips.find(x => x.id === d.id); confirmModal('旅行を削除', `「${t.name}」を削除します。予定・予約などもすべて消えて、元にもどせません。`, 'doDelTrip', d.id); },
+  doDelTrip(d) { closeModal(); deleteTrip(d.id); },
+  tab(d) { S.tab = d.t; render(); window.scrollTo(0,0); },
+  view(d) { S.view = d.v; render(); },
+  calSel(d) { S.calSel = d.d; render(); },
+  calMonth(d) { S.calMonth = d.m; render(); },
+  addEv(d) { evForm(null, d.d); },
+  editEv(d) { evForm(d.id); },
+  dupEv(d) {
+    const e = S.events.find(x => x.id === d.id); const list = dayEvents(e.date); const i = list.findIndex(x => x.id === d.id); const next = list[i + 1];
+    const { id, ...rest } = e; const order = next ? ((e.order ?? 0) + (next.order ?? 0)) / 2 : (e.order ?? 0) + 1000;
+    fire(setDoc(doc(evCol()), { ...rest, title: e.title + '(コピー)', order })); toast('複製しました');
+  },
+  moveEv(d) { moveEv(d.id, Number(d.dir)); },
+  sortDay(d) { sortDay(d.d); },
+  delEv(d) { closeModal(); fire(deleteDoc(evRef(d.id))); toast('削除しました'); },
+  addCand() { candForm(null); },
+  editCand(d) { candForm(d.id); },
+  delCand(d) { closeModal(); fire(deleteDoc(cdRef(d.id))); toast('削除しました'); },
+  candToEv(d) {
+    const t = curTrip(); const c = S.cands.find(x => x.id === d.id); const date = c.date || t.start;
+    fire(setDoc(doc(evCol()), { date, start:'', end:'', title: c.name, type:'sight', confirmed:false, place: c.name, address:'', url: c.url || '', mapUrl: c.mapUrl || '', resvId:'', memo: c.memo || '', rainPlan:'', kidTitle:'', kidNote:'', order: placeOrder(date, '') }));
+    fire(updateDoc(cdRef(c.id), { status: 'adopt' })); toast(`${fmtD(date)}の予定に追加しました(時刻は未確定)`);
+  },
+  addResv() { resvForm(null); },
+  editResv(d) { resvForm(d.id); },
+  delResv(d) { closeModal(); fire(deleteDoc(rvRef(d.id))); toast('削除しました'); },
+  print() { window.print(); },
+  exportJson() { exportJson(); },
+  mclose(d, b, e) { if (b.classList.contains('mback') && e.target !== b) return; closeModal(); }
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const fn = H[b.dataset.a]; if (fn) { e.stopPropagation(); fn(b.dataset, b, e); }
+});
+document.addEventListener('change', e => {
+  const k = e.target.dataset && e.target.dataset.opt; if (k) { S.sh[k] = e.target.checked; render(); }
+});
+
+const setOnline = () => $('#offline').classList.toggle('show', !navigator.onLine);
+window.addEventListener('online', setOnline); window.addEventListener('offline', setOnline); setOnline();
+window.__S = S;
+</script>
+</body>
+</html>
