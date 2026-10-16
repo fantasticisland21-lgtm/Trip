@@ -31,9 +31,9 @@ header.top .ver{display:block;font-size:11px;font-weight:400;color:var(--sub)}
 .ck{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid #c7c6c4;background:#fff;font-size:17px;font-weight:700;color:#fff;line-height:1;padding:0}
 .ck:disabled{opacity:.6}.item.done .ck{background:var(--acc);border-color:var(--acc)}
 .ib{flex:1;min-width:0}
-.sitem{display:flex;gap:10px;align-items:center;border-bottom:1px dashed #000;padding:8px 2px;font-size:20px;font-weight:700;break-inside:avoid;page-break-inside:avoid}
-.sbox2{flex:0 0 28px;height:28px;border:3px solid #000;border-radius:6px}
-.sitem small{font-weight:400;font-size:14px}
+.sitem{display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding:10px 2px;font-size:20px;font-weight:600;break-inside:avoid;page-break-inside:avoid}
+.sbox2{flex:0 0 24px;height:24px;border:2px solid #c7c6c4;border-radius:5px}
+.sitem small{font-weight:400;font-size:14px;color:var(--sub)}
 .gsum{display:flex;gap:10px}.gsum>div{flex:1}.gsum b{display:block;font-size:20px}
 .item .ck.gift{font-size:15px}
 .bsum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.bsum b{display:block;font-size:20px}
@@ -135,24 +135,24 @@ input,select,textarea{max-width:100%}
 .opts .chk{margin:4px 0;font-size:15px}
 /* ---- しおり ---- */
 .sheetwrap{margin-top:10px}
-.page{background:#fff;border:2px solid #222;border-radius:12px;padding:16px;margin:14px 0;color:#000}
-.stitle{font-size:30px;font-weight:800;text-align:center;line-height:1.4;margin:10px 0}
-.sinfo{font-size:19px;text-align:center;margin:4px 0}
-.sbox{border:2px solid #000;border-radius:10px;padding:8px 12px;margin:14px 0;font-size:18px}
+.page{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 18px;margin:14px 0;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.stitle{font-size:30px;font-weight:700;line-height:1.4;margin:6px 0 14px}
+.sprop{display:flex;gap:12px;align-items:baseline;font-size:18px;padding:5px 0}.sprop .k{flex:0 0 6.5em;color:var(--sub);font-size:15px}
+.sbox{display:flex;gap:10px;background:#f1f1ef;border-radius:8px;padding:12px 14px;margin:18px 0 0;font-size:18px}.sbox .ic{flex:0 0 auto}
 .sbox b{display:block;margin-bottom:2px}
-.sday{font-size:24px;font-weight:800;border-bottom:4px solid #000;padding-bottom:4px;margin:0 0 10px}
-.sday span{background:#000;color:#fff;border-radius:8px;padding:0 10px;margin-right:8px}
-.sc{display:flex;gap:10px;align-items:flex-start;border:2px solid #000;border-radius:12px;padding:10px;margin:10px 0;break-inside:avoid;page-break-inside:avoid}
-.snum{flex:0 0 36px;height:36px;border-radius:50%;border:3px solid #000;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center}
-.stime{flex:0 0 92px;font-size:30px;font-weight:800;line-height:1.1}
-.stime small{display:block;font-size:14px;font-weight:600}
-.sbody{flex:1;min-width:0;font-size:20px;font-weight:700;word-break:break-word}
-.sbody .snote{font-weight:400;font-size:17px;margin-top:2px}
-.sbody .smeta{font-weight:400;font-size:14px;margin-top:2px}
-.tbdlabel{border:2px dashed #000;border-radius:6px;padding:0 6px;font-size:15px}
+.sday{font-size:24px;font-weight:700;border-bottom:1px solid var(--line);padding-bottom:8px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.sday span{background:#f1f1ef;color:var(--ink);border-radius:5px;padding:0 10px;font-size:20px}
+.sc{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0;break-inside:avoid;page-break-inside:avoid}
+.snum{flex:0 0 30px;height:30px;border-radius:50%;background:#f1f1ef;color:var(--sub);font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.stime{flex:0 0 88px;font-size:28px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.stime small{display:block;font-size:14px;font-weight:500;color:var(--sub);margin-top:2px}
+.sbody{flex:1;min-width:0;font-size:20px;font-weight:600;word-break:break-word}
+.sbody .snote{font-weight:400;font-size:17px;margin-top:4px}
+.sbody .smeta{font-weight:400;font-size:14px;margin-top:3px;color:var(--sub)}
+.tbdlabel{border:1px dashed #c7c6c4;border-radius:5px;padding:0 6px;font-size:15px;color:var(--sub);font-weight:500}
 rt{font-size:.55em}
-.sempty{font-size:18px;text-align:center;padding:20px}
-@media(max-width:480px){.stime{flex-basis:74px;font-size:26px}.stitle{font-size:26px}}
+.sempty{font-size:18px;text-align:center;padding:20px;color:var(--sub)}
+@media(max-width:480px){.stime{flex-basis:72px;font-size:24px}.stitle{font-size:26px}.sprop .k{flex-basis:5.5em}}
 @media print{
   @page{margin:12mm}
   body{background:#fff;padding:0}
@@ -192,7 +192,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v11.1';
+const VERSION = 'v11.2';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -239,6 +239,7 @@ const tkRef = id => doc(db,'trips',S.tripId,'tasks',id);
 const yen = n => '¥' + (Number(n) || 0).toLocaleString('ja-JP');
 
 /* ふりがな: 「漢字{かんじ}」と書くと、しおりでふりがなが付く */
+const plain = s => ruby(s, false);
 const ruby = (text, on) => esc(text).replace(/([一-鿿々〆ヶ]+)\{([^{}]+)\}/g, on ? '<ruby>$1<rt>$2</rt></ruby>' : '$1').replace(/[{}]/g, '');
 
 /* ================= 認証 ================= */
@@ -346,7 +347,7 @@ function listHTML() {
   const td = today();
   const now = S.trips.filter(t => (t.end || t.start || '') >= td), past = S.trips.filter(t => (t.end || t.start || '') < td);
   const card = t => `<div class="card tcard ${t.id === S.tripId ? 'cur' : ''}" data-a="openTrip" data-id="${t.id}">
-    <h2>${esc(t.name)}</h2><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + esc(t.dest) : ''}</div>
+    <h2>${plain(t.name)}</h2><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div>
     <div style="margin-top:6px"><span class="tag ${isParent(t) ? '' : 'gray'}">${isParent(t) ? '保護者(編集できる)' : '見るだけ'}</span>${t.people ? `<span class="sub">${esc(t.people)}</span>` : ''}</div>
     ${isParent(t) ? `<div class="eact"><button class="mini" data-a="dupTrip" data-id="${t.id}">複製</button><button class="mini ng" data-a="delTrip" data-id="${t.id}">削除</button></div>` : ''}</div>`;
   return `<div class="bar"><h2>旅行の一覧</h2><button class="btn" data-a="newTrip">＋新しい旅行</button></div>
@@ -359,7 +360,7 @@ function detailHTML(t) {
   const tabs = [['schedule','予定'],['cands','行き先候補'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['shiori','しおり'],['settings','設定']];
   if (S.tab === 'budget' && !par) S.tab = 'schedule';
   const body = S.tab === 'schedule' ? scheduleHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'items' ? itemsHTML(par) : S.tab === 'tasks' ? tasksHTML(t,par) : S.tab === 'gifts' ? giftsHTML(par) : S.tab === 'budget' ? budgetHTML(t,par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
-  return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><div class="tname"><h1>${esc(t.name)}</h1>${par ? '<button class="mini" data-a="renameTrip">✏️ 名前</button>' : ''}</div><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + esc(t.dest) : ''}</div></div></div>
+  return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><div class="tname"><h1>${plain(t.name)}</h1>${par ? '<button class="mini" data-a="renameTrip">✏️ 名前</button>' : ''}</div><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div></div></div>
   <nav class="tabs">${tabs.map(([k,l]) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}">${l}</button>`).join('')}</nav>
   ${par ? '' : '<div class="note">この旅行は「見るだけ」です(変更は保護者のアカウントでできます)</div>'}
   ${body}`;
@@ -386,12 +387,12 @@ function evHTML(e, i, n, par) {
   const links = [aLink(safeUrl(e.url), '公式サイト'), aLink(mapLink(e), '地図')].join('');
   return `<div class="ev ${e.confirmed === false ? 'tbd' : ''}">
    ${etimeHTML(e.start, e.end)}
-   <div class="ebody"><div class="ett">${esc(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}</div>
-   ${e.place ? `<div class="sub">📍 ${esc(e.place)}${e.address ? '(' + esc(e.address) + ')' : ''}</div>` : (e.address ? `<div class="sub">📍 ${esc(e.address)}</div>` : '')}
+   <div class="ebody"><div class="ett">${plain(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}</div>
+   ${e.place ? `<div class="sub">📍 ${plain(e.place)}${e.address ? '(' + esc(e.address) + ')' : ''}</div>` : (e.address ? `<div class="sub">📍 ${esc(e.address)}</div>` : '')}
    ${rv ? `<div class="sub">🎫 ${esc(rv.target)}</div>` : ''}
    ${links ? `<div class="links">${links}</div>` : ''}
    ${e.memo ? `<div class="memo">${esc(e.memo)}</div>` : ''}
-   ${e.rainPlan ? `<div class="rain">☔ 雨の日: ${esc(e.rainPlan)}</div>` : ''}
+   ${e.rainPlan ? `<div class="rain">☔ 雨の日: ${plain(e.rainPlan)}</div>` : ''}
    ${par ? `<div class="eact"><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="1" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="mini" data-a="editEv" data-id="${e.id}">編集</button><button class="mini" data-a="dupEv" data-id="${e.id}">複製</button></div>` : ''}
    </div></div>`;
 }
@@ -440,7 +441,7 @@ function itemsHTML(par) {
    ${par ? `<form data-f="itemquick" class="qadd"><input type="text" name="name" placeholder="持ち物を入力して「追加」" autocomplete="off"><button class="btn" type="submit">追加</button></form>` : ''}
    <div class="bar"><div class="seg"><button class="${S.itemFilter === 'all' ? 'on' : ''}" data-a="filterItems" data-v="all">すべて</button><button class="${S.itemFilter === 'todo' ? 'on' : ''}" data-a="filterItems" data-v="todo">まだのもの</button></div>${par ? '<button class="mini" data-a="copyItemsModal">他の旅行からコピー</button>' : ''}</div>
    ${shown.length ? shown.map(i => `<div class="item ${i.done ? 'done' : ''}"><button class="ck" data-a="toggleItem" data-id="${i.id}" aria-label="準備できた" ${par ? '' : 'disabled'}>${i.done ? '✓' : ''}</button>
-     <div class="ib"><div class="ett">${esc(i.name)}${Number(i.qty) > 1 ? ` <span class="tag">×${esc(i.qty)}</span>` : ''}${i.assignee ? ` <span class="tag gray">${esc(i.assignee)}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
+     <div class="ib"><div class="ett">${plain(i.name)}${Number(i.qty) > 1 ? ` <span class="tag">×${esc(i.qty)}</span>` : ''}${i.assignee ? ` <span class="tag gray">${esc(i.assignee)}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
      ${par ? `<button class="mini" data-a="editItem" data-id="${i.id}">編集</button>` : ''}</div>`).join('') : `<div class="empty">${list.length ? 'ぜんぶ準備できました 🎉' : 'まだ持ち物がありません'}</div>`}`;
 }
 
@@ -562,11 +563,11 @@ function shioriHTML(t) {
   const o = S.sh; const R = s => ruby(s, o.ruby);
   const opt = (k, label) => `<label class="chk"><input type="checkbox" data-opt="${k}" ${o[k] ? 'checked' : ''}>${label}</label>`;
   const days = allDays(t);
-  let pages = `<section class="page"><div class="stitle">${R(t.name)}</div>
-    <div class="sinfo">📅 ${fmtD(t.start)} 〜 ${fmtD(t.end)}</div>
-    ${t.dest ? `<div class="sinfo">📍 ${R(t.dest)}</div>` : ''}
-    ${o.people && t.people ? `<div class="sinfo">👪 ${R(t.people)}</div>` : ''}
-    ${o.notice && t.notice ? `<div class="sbox"><b>みんなへのれんらく</b>${R(t.notice).replace(/\n/g, '<br>')}</div>` : ''}</section>`;
+  let pages = `<section class="page"><div style="font-size:44px;line-height:1">✈️</div><div class="stitle">${R(t.name)}</div>
+    <div class="sprop"><span class="k">📅 いつ</span><span>${fmtD(t.start)} 〜 ${fmtD(t.end)}</span></div>
+    ${t.dest ? `<div class="sprop"><span class="k">📍 どこへ</span><span>${R(t.dest)}</span></div>` : ''}
+    ${o.people && t.people ? `<div class="sprop"><span class="k">👪 だれと</span><span>${R(t.people)}</span></div>` : ''}
+    ${o.notice && t.notice ? `<div class="sbox"><span class="ic">💡</span><div><b>みんなへのれんらく</b>${R(t.notice).replace(/\n/g, '<br>')}</div></div>` : ''}</section>`;
   if (o.items && S.items.length) {
     pages += `<section class="page"><div class="sday"><span>🎒</span>もちもの</div>` + S.items.slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0)).map(it => `<div class="sitem"><div class="sbox2"></div><div>${R(it.name)}${Number(it.qty) > 1 ? ' × ' + esc(it.qty) : ''}${it.assignee ? ` <small>(${R(it.assignee)})</small>` : ''}</div></div>`).join('') + '</section>';
   }
