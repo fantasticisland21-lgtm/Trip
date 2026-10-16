@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="家族旅行">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#ffffff">
-<link rel="apple-touch-icon" href="icon.png?v=3">
-<link rel="icon" href="icon.png?v=3">
+<link rel="apple-touch-icon" href="icon.png?v=4">
+<link rel="icon" href="icon.png?v=4">
 <link rel="manifest" href="manifest.json">
 <title>家族旅行ノート</title>
 <style>
@@ -205,7 +205,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v14.2';
+const VERSION = 'v14.3';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
