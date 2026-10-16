@@ -199,7 +199,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v13.2';
+const VERSION = 'v13.3';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -474,7 +474,7 @@ function itemsHTML(par) {
   const visible = i => !todo || !i.done || desc(i.id).some(x => !x.done);
   const row = (i, depth) => { const n = i.isBag ? desc(i.id).filter(x => !x.isBag) : null;
     return `<div class="item ${i.isBag ? 'bag' : ''} ${i.done ? 'done' : ''}" style="margin-left:${depth * 24}px"><button class="ck" data-a="toggleItem" data-id="${i.id}" aria-label="準備できた" ${par ? '' : 'disabled'}>${i.done ? '✓' : ''}</button>
-     <div class="ib"><div class="ett">${bagIcon(i, depth)}${plain(i.name)}${Number(i.qty) > 1 ? ` <span class="tag">×${esc(i.qty)}</span>` : ''}${i.assignee ? ` <span class="tag gray">${esc(i.assignee)}</span>` : ''}${n && n.length ? ` <span class="sub">${n.filter(x => x.done).length}/${n.length}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
+     <div class="ib"><div class="ett">${bagIcon(i, depth)}${plain(i.name)}${n && n.length ? ` <span class="sub">${n.filter(x => x.done).length}/${n.length}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
      ${par ? `<div class="acts"><button class="mini" data-a="moveItem" data-id="${i.id}">移動</button><button class="mini" data-a="editItem" data-id="${i.id}">編集</button></div>` : ''}</div>`; };
   const branch = (i, depth, guard) => { if (guard.has(i.id) || !visible(i)) return ''; guard.add(i.id);
     const ch = kids(i.id);
@@ -485,7 +485,7 @@ function itemsHTML(par) {
   const ls = loose.map(i => branch(i, 0, guard)).join('');
   if (ls) body += (bags.length ? '<div class="bagh">かばんに入れないもの</div>' : '') + ls;
   topBags.forEach(b => { const h = branch(b, 0, guard); if (h) body += '<div style="height:8px"></div>' + h; });
-  const chips = bags.length && par ? `<div class="sub" style="margin:2px 0 0">入れる先</div><div class="chips" style="margin:0 0 8px">${[['','かばんなし'], ...bags.map(b => [b.id, bagPath(b.id)])].map(([v,l]) => `<label><input type="radio" name="itembag" data-a="itemBag" data-v="${v}" ${S.itemBag === v ? 'checked' : ''}><span>${v ? '🧳 ' : ''}${l}</span></label>`).join('')}</div>` : '';
+  const chips = bags.length && par ? `<div class="sub" style="margin:2px 0 0">入れる先</div><div class="chips" style="margin:0 0 8px">${[['','かばんなし'], ...bags.map(b => [b.id, (bags.some(x => x.id === b.bag) ? '👝 ' : '🧳 ') + plain(b.name)])].map(([v,l]) => `<label><input type="radio" name="itembag" data-a="itemBag" data-v="${v}" ${S.itemBag === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>` : '';
   const done = list.filter(i => i.done).length;
   return `<div class="bar"><h2>持ち物リスト</h2><div class="sub"><b>${done}</b> / ${list.length} 準備できた</div></div>
    ${par ? `<form data-f="itemquick" class="qadd"><input type="text" name="name" placeholder="持ち物を入力して「追加」" autocomplete="off"><button class="btn" type="submit">追加</button></form>${chips}` : ''}
@@ -618,7 +618,7 @@ function shioriHTML(t) {
     ${o.notice && t.notice ? `<div class="sbox"><span class="ic">💡</span><div><b>みんなへのれんらく</b>${R(t.notice).replace(/\n/g, '<br>')}</div></div>` : ''}</section>`;
   if (o.items && S.items.length) {
     const { roots, kids } = itemTree(); const g = new Set();
-    const row = (it, depth) => `<div class="sitem ${it.isBag ? 'sbag' : ''}" style="padding-left:${depth * 30 + 2}px"><div class="sbox2"></div><div>${bagIcon(it, depth)}${R(it.name)}${Number(it.qty) > 1 ? ' × ' + esc(it.qty) : ''}${it.assignee ? ` <small>(${R(it.assignee)})</small>` : ''}</div></div>`;
+    const row = (it, depth) => `<div class="sitem ${it.isBag ? 'sbag' : ''}" style="padding-left:${depth * 30 + 2}px"><div class="sbox2"></div><div>${bagIcon(it, depth)}${R(it.name)}</div></div>`;
     const br = (it, depth) => { if (g.has(it.id)) return ''; g.add(it.id); return row(it, depth) + kids(it.id).map(c => br(c, depth + 1)).join(''); };
     pages += `<section class="page"><div class="sday"><span>🎒</span>もちもの</div>` + roots.filter(i => !i.isBag).map(i => br(i, 0)).join('') + roots.filter(i => i.isBag).map(i => br(i, 0)).join('') + '</section>';
   }
@@ -783,7 +783,6 @@ function itemForm(id, asBag) {
   openModal(d.isBag ? (it ? 'かばんを編集' : 'かばんを追加') : (it ? '持ち物を編集' : '持ち物を追加'), `<form data-f="item" data-id="${it ? it.id : ''}" data-bag="${d.isBag ? 1 : ''}">
    ${inp('name', d.isBag ? 'かばんの名前(キャリーバッグ、リュックなど)' : '持ち物', d.name, 'text', 'required')}
    ${bags.length ? `<label class="f">${d.isBag ? 'このかばんを入れる先(ポーチをキャリーバッグに入れる、など)' : '入れるかばん'}</label><select name="bag"><option value="">${d.isBag ? 'どこにも入れない' : 'かばんに入れない'}</option>${bags.map(b => `<option value="${b.id}" ${d.bag === b.id ? 'selected' : ''}>🧳 ${bagPath(b.id)}</option>`).join('')}</select>` : ''}
-   <div class="row2"><div>${inp('qty','個数',d.qty,'number','min="1" inputmode="numeric"')}</div><div>${inp('assignee','担当(だれが持つ)',d.assignee)}</div></div>
    ${area('memo','メモ',d.memo)}
    ${d.isBag && it ? '<div class="sub" style="margin-top:6px">かばんを消しても中身は消えず、ひとつ外側に出ます</div>' : ''}
    ${acts('保存する', it ? `<button class="btn ng" type="button" data-a="delItem" data-id="${it.id}">削除</button>` : '')}</form>`);
@@ -838,7 +837,7 @@ const submitters = {
   },
   item(fd, f) {
     const id = f.dataset.id; const isBag = !!f.dataset.bag;
-    const data = { name: val(fd,'name'), qty: Math.max(1, Number(val(fd,'qty')) || 1), assignee: val(fd,'assignee'), memo: val(fd,'memo'), isBag, bag: val(fd,'bag') };
+    const data = { name: val(fd,'name'), memo: val(fd,'memo'), isBag, bag: val(fd,'bag') };
     if (id) fire(updateDoc(itRef(id), data)); else { const ref = doc(collection(db,'trips',S.tripId,'items')); fire(setDoc(ref, { ...data, done: false, order: Date.now() })); if (isBag) S.itemBag = ref.id; }
     closeModal(); toast('保存しました');
   },
@@ -885,7 +884,7 @@ const submitters = {
   },
   itemquick(fd, f) {
     const name = val(fd,'name'); if (!name) return;
-    fire(setDoc(doc(collection(db,'trips',S.tripId,'items')), { name, qty: 1, assignee: '', memo: '', done: false, isBag: false, bag: S.itemBag || '', order: Date.now() })); f.reset();
+    fire(setDoc(doc(collection(db,'trips',S.tripId,'items')), { name, memo: '', done: false, isBag: false, bag: S.itemBag || '', order: Date.now() })); f.reset();
   },
   dup(fd, f) {
     const id = f.dataset.id; const name = val(fd,'name'), start = val(fd,'start');
