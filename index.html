@@ -57,6 +57,9 @@ header.top .ver{display:block;font-size:11px;font-weight:400;color:var(--sub)}
 .mvlist{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px}.mvlist button{text-align:left;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px}.mvlist button.cur{background:var(--main2);font-weight:700}
 .item .acts{display:flex;gap:4px;flex:0 0 auto}
 .sech{display:flex;align-items:center;gap:10px;margin:22px 0 6px;padding:0 2px 6px;border-bottom:1px solid var(--line)}.sech h3{margin:0;font-size:17px;flex:1;min-width:0;word-break:break-word}.sech .sub{white-space:nowrap}
+.note-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}.note-card.pin{background:#fbf3db;border-color:#f1e1b0}
+.note-card .txt{white-space:pre-wrap;word-break:break-word;font-size:16px}.note-card .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--sub)}.note-card .meta .acts{margin-left:auto;display:flex;gap:4px}
+.qnote textarea{min-height:64px}
 .verfoot{text-align:center;color:var(--sub);font-size:12px;margin-top:18px}
 header.top .who{font-size:12px;opacity:.9;max-width:40vw;display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 header.top button{background:var(--main2);border:0;color:var(--ink);border-radius:10px;padding:8px 12px}
@@ -200,7 +203,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v13.7';
+const VERSION = 'v14';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -230,7 +233,7 @@ const S = {
   ready:false, user:null, email:'', authMode:'login', authErr:'',
   trips:[], tripMap:{parents:[], viewers:[]}, tripId:null,
   tab:'schedule', view:'timeline',
-  events:[], cands:[], resvs:[], items:[], itemFilter:'all', itemBag:'', gifts:[], giftFilter:'all', expenses:[], expFilter:'all', tasks:[], taskFilter:'todo', taskWho:'',
+  events:[], cands:[], resvs:[], items:[], itemFilter:'all', itemBag:'', gifts:[], giftFilter:'all', expenses:[], expFilter:'all', tasks:[], taskFilter:'todo', taskWho:'', notes:[],
   unTrips:[], unSub:[],
   sh:{ items:true, ruby:true, place:true, map:false, url:false, rain:false, memo:false, resv:false, resvNo:false, notice:true, people:true, gifts:true, giftPrice:false }
 };
@@ -244,6 +247,7 @@ const itRef = id => doc(db,'trips',S.tripId,'items',id);
 const gfRef = id => doc(db,'trips',S.tripId,'souvenirs',id);
 const exRef = id => doc(db,'trips',S.tripId,'expenses',id);
 const tkRef = id => doc(db,'trips',S.tripId,'tasks',id);
+const ntRef = id => doc(db,'trips',S.tripId,'notes',id);
 const yen = n => '¥' + (Number(n) || 0).toLocaleString('ja-JP');
 
 /* ふりがな: 「漢字{かんじ}」と書くと、しおりでふりがなが付く */
@@ -286,7 +290,7 @@ function subscribeTrips() {
   }
 }
 function openTrip(id) {
-  unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.items = []; S.gifts = []; S.expenses = []; S.tasks = []; S.taskWho = '';
+  unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.items = []; S.gifts = []; S.expenses = []; S.tasks = []; S.notes = []; S.taskWho = '';
   const listen = (k, name, tries) => onSnapshot(collection(db,'trips',id,name), snap => {
     S[k] = snap.docs.map(d => ({ id:d.id, ...d.data() })); render();
   }, err => {
@@ -294,7 +298,7 @@ function openTrip(id) {
     if (tries < 3 && S.tripId === id) setTimeout(() => { if (S.tripId === id) S.unSub.push(listen(k, name, tries + 1)); }, 1500 * (tries + 1));
     else toast('読みこめません(' + err.code + ')', true);
   });
-  for (const [k,name] of [['events','events'],['cands','candidates'],['resvs','reservations'],['items','items'],['gifts','souvenirs'],['expenses','expenses'],['tasks','tasks']]) S.unSub.push(listen(k, name, 0));
+  for (const [k,name] of [['events','events'],['cands','candidates'],['resvs','reservations'],['items','items'],['gifts','souvenirs'],['expenses','expenses'],['tasks','tasks'],['notes','notes']]) S.unSub.push(listen(k, name, 0));
   render(); window.scrollTo(0,0);
 }
 function closeTrip() { unsubTrip(); S.tripId = null; render(); window.scrollTo(0,0); }
@@ -369,9 +373,9 @@ function listHTML() {
 
 function detailHTML(t) {
   const par = isParent(t);
-  const tabs = [['schedule','予定'],['cands','行き先'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['shiori','しおり'],['settings','設定']];
+  const tabs = [['schedule','予定'],['cands','行き先'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['notes','メモ'],['shiori','しおり'],['settings','設定']];
   if (S.tab === 'budget' && !par) S.tab = 'schedule';
-  const body = S.tab === 'schedule' ? scheduleHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'items' ? itemsHTML(par) : S.tab === 'tasks' ? tasksHTML(t,par) : S.tab === 'gifts' ? giftsHTML(par) : S.tab === 'budget' ? budgetHTML(t,par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
+  const body = S.tab === 'schedule' ? scheduleHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'items' ? itemsHTML(par) : S.tab === 'tasks' ? tasksHTML(t,par) : S.tab === 'gifts' ? giftsHTML(par) : S.tab === 'budget' ? budgetHTML(t,par) : S.tab === 'notes' ? notesHTML(par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
   return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><div class="tname"><h1>${plain(t.name)}</h1>${par ? '<button class="mini" data-a="renameTrip">✏️ 名前</button>' : ''}</div><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div></div></div>
   <nav class="tabs">${tabs.map(([k,l],i) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}"${i === 5 ? ` style="grid-column:${11 - tabs.length} / span 2"` : ''}>${l}</button>`).join('')}</nav>
   ${par ? '' : '<div class="note">この旅行は「見るだけ」です(変更は保護者のアカウントでできます)</div>'}
@@ -538,6 +542,20 @@ function tasksHTML(t, par) {
       <div class="tk-meta">${dueTag(x)}${x.done && x.due ? `<span class="tag gray">${fmtD(x.due)}まで</span>` : ''}${x.assignee ? `<span class="tag gray">👤 ${esc(x.assignee)}</span>` : ''}</div>
       ${x.memo ? `<div class="sub">${esc(x.memo)}</div>` : ''}</div>
      ${par ? `<button class="mini" data-a="editTask" data-id="${x.id}">編集</button>` : ''}</div>`).join('') : `<div class="empty">${list.length ? (f === 'todo' ? 'ぜんぶ終わりました 🎉' : 'この中にはありません') : 'まだ準備することがありません。<br>上の欄に入れるか、「よくある準備」から選べます'}</div>`}`;
+}
+
+/* ---- 家族共有メモ ---- */
+const fmtTime = ms => { if (!ms) return ''; const d = new Date(ms); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${pad(d.getMinutes())}`; };
+const who = e => String(e || '').split('@')[0];
+const linkify = t => esc(t).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+function notesHTML(par) {
+  const list = S.notes.slice().sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.createdAt || 0) - (a.createdAt || 0));
+  return `<div class="bar"><h2>家族のメモ</h2><span class="sub">${list.length}件</span></div>
+   <div class="sub">家族みんなで見られるメモです。集合場所、決めたこと、思いついたことなど</div>
+   ${par ? `<form data-f="notequick" class="qnote" style="margin:8px 0"><textarea name="text" placeholder="メモを書く" required></textarea><div class="mact" style="margin-top:6px"><button class="btn" type="submit">書きこむ</button></div></form>` : ''}
+   ${list.length ? list.map(n => `<div class="note-card ${n.pinned ? 'pin' : ''}"><div class="txt">${linkify(n.text)}</div>
+     <div class="meta">${n.pinned ? '<span>📌 上に固定</span>・' : ''}<span>${esc(who(n.by))}</span><span>${fmtTime(n.updatedAt || n.createdAt)}${n.updatedAt ? '(編集)' : ''}</span>
+     ${par ? `<span class="acts"><button class="mini" data-a="pinNote" data-id="${n.id}">${n.pinned ? '固定をやめる' : '📌 固定'}</button><button class="mini" data-a="editNote" data-id="${n.id}">編集</button></span>` : ''}</div></div>`).join('') : '<div class="empty">まだメモがありません</div>'}`;
 }
 
 /* ---- お土産 ---- */
@@ -882,6 +900,14 @@ const submitters = {
     if (id) fire(updateDoc(exRef(id), data)); else fire(setDoc(doc(collection(db,'trips',S.tripId,'expenses')), { ...data, order: Date.now() }));
     closeModal(); toast('保存しました');
   },
+  notequick(fd, f) {
+    const text = String(fd.get('text') || '').trim(); if (!text) return;
+    fire(setDoc(doc(collection(db,'trips',S.tripId,'notes')), { text, by: S.email, createdAt: Date.now(), pinned: false })); f.reset(); toast('書きこみました');
+  },
+  note(fd, f) {
+    const text = String(fd.get('text') || '').trim(); if (!text) return;
+    fire(updateDoc(ntRef(f.dataset.id), { text, updatedAt: Date.now() })); closeModal(); toast('保存しました');
+  },
   task(fd, f) {
     const id = f.dataset.id; const data = { title: val(fd,'title'), due: val(fd,'due'), assignee: val(fd,'assignee'), memo: val(fd,'memo'), done: fd.get('done') === 'on' };
     if (id) fire(updateDoc(tkRef(id), data)); else fire(setDoc(doc(collection(db,'trips',S.tripId,'tasks')), { ...data, order: Date.now() }));
@@ -936,7 +962,7 @@ async function duplicateTrip(srcId, name, newStart) {
 async function deleteTrip(id) {
   try {
     toast('削除しています…');
-    for (const n of ['events','candidates','reservations','items','souvenirs','expenses','tasks']) {
+    for (const n of ['events','candidates','reservations','items','souvenirs','expenses','tasks','notes']) {
       const snap = await getDocs(collection(db,'trips',id,n)); const b = writeBatch(db); snap.docs.forEach(d => b.delete(d.ref)); await b.commit();
     }
     await deleteDoc(doc(db,'trips',id));
@@ -945,7 +971,7 @@ async function deleteTrip(id) {
 }
 function exportJson() {
   const t = curTrip(); const strip = o => { const { id, ...r } = o; return { id, ...r }; };
-  const data = { exportedAt: new Date().toISOString(), trip: strip({ ...t, createdAt: undefined }), events: S.events, candidates: S.cands, reservations: S.resvs, items: S.items, souvenirs: S.gifts, expenses: S.expenses, tasks: S.tasks };
+  const data = { exportedAt: new Date().toISOString(), trip: strip({ ...t, createdAt: undefined }), events: S.events, candidates: S.cands, reservations: S.resvs, items: S.items, souvenirs: S.gifts, expenses: S.expenses, tasks: S.tasks, notes: S.notes };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `trip-${t.name}.json`; document.body.appendChild(a); a.click(); a.remove();
 }
@@ -1049,6 +1075,10 @@ const H = {
   addGift() { giftForm(null); },
   editGift(d) { giftForm(d.id); },
   delGift(d) { closeModal(); fire(deleteDoc(gfRef(d.id))); toast('削除しました'); },
+  pinNote(d) { const n = S.notes.find(x => x.id === d.id); if (n) fire(updateDoc(ntRef(d.id), { pinned: !n.pinned })); },
+  editNote(d) { const n = S.notes.find(x => x.id === d.id); if (!n) return;
+    openModal('メモを編集', `<form data-f="note" data-id="${n.id}"><textarea name="text" style="min-height:140px" required>${esc(n.text)}</textarea>${acts('保存する', `<button class="btn ng" type="button" data-a="delNote" data-id="${n.id}">削除</button>`)}</form>`); },
+  delNote(d) { closeModal(); fire(deleteDoc(ntRef(d.id))); toast('削除しました'); },
   filterTasks(d) { S.taskFilter = d.v; render(); },
   taskWho(d) { S.taskWho = d.v; render(); },
   toggleTask(d) { const x = S.tasks.find(e => e.id === d.id); if (x) fire(updateDoc(tkRef(d.id), { done: !x.done })); },
