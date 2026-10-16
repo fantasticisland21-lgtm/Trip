@@ -81,7 +81,7 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
 .btn.ng{background:var(--ng)}
 .btn.block{display:block;width:100%}
-.mini{background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 12px;min-height:36px}
+.mini{white-space:nowrap;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 12px;min-height:36px}
 .mini:disabled{opacity:.35}
 .mini.ng{color:var(--ng);border-color:#f3b4b4}
 .tag{display:inline-block;background:#e7f3f8;color:#28698f;border-radius:4px;padding:0 8px;font-size:13px;margin-right:4px}
@@ -97,7 +97,7 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .note{background:#e7f3f8;color:#28698f;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
 .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
-.seg button{background:#fff;border:0;padding:8px 12px;color:var(--sub);min-height:40px}
+.seg button{white-space:nowrap;background:#fff;border:0;padding:8px 12px;color:var(--sub);min-height:40px}
 .seg button.on{background:var(--main2);color:var(--ink);font-weight:700}
 .dayh{display:flex;justify-content:space-between;align-items:center;margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 .dayh h2 span{color:var(--sub)}
@@ -199,7 +199,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v13.3';
+const VERSION = 'v13.4';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -464,7 +464,10 @@ function itemTree() {
   const desc = id => { const out = []; const st = [id], vis = new Set([id]); while (st.length) { const x = st.pop(); list.filter(i => parentOf(i) === x && !vis.has(i.id)).forEach(c => { vis.add(c.id); out.push(c); st.push(c.id); }); } return out; };
   return { list, roots, kids, desc };
 }
-const bagIcon = (i, depth) => i.isBag ? (depth ? '👝 ' : '🧳 ') : '';
+const isCar = i => !!(i && i.isBag && i.kind === 'car');
+// 車は🚗、車の中や一番外のかばんは🧳、かばんの中のかばんは👝
+const bagMark = b => isCar(b) ? '🚗 ' : S.items.some(x => x.isBag && !isCar(x) && x.id === b.bag) ? '👝 ' : '🧳 ';
+const bagIcon = (i, depth) => i.isBag ? bagMark(i) : '';
 function bagPath(id) { const names = [], vis = new Set(); let cur = S.items.find(x => x.id === id); while (cur && !vis.has(cur.id)) { vis.add(cur.id); names.unshift(plain(cur.name)); cur = S.items.find(x => x.id === cur.bag && x.isBag); } return names.join(' › '); }
 function itemsHTML(par) {
   const { list, roots, kids, desc } = itemTree();
@@ -475,7 +478,7 @@ function itemsHTML(par) {
   const row = (i, depth) => { const n = i.isBag ? desc(i.id).filter(x => !x.isBag) : null;
     return `<div class="item ${i.isBag ? 'bag' : ''} ${i.done ? 'done' : ''}" style="margin-left:${depth * 24}px"><button class="ck" data-a="toggleItem" data-id="${i.id}" aria-label="準備できた" ${par ? '' : 'disabled'}>${i.done ? '✓' : ''}</button>
      <div class="ib"><div class="ett">${bagIcon(i, depth)}${plain(i.name)}${n && n.length ? ` <span class="sub">${n.filter(x => x.done).length}/${n.length}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
-     ${par ? `<div class="acts"><button class="mini" data-a="moveItem" data-id="${i.id}">移動</button><button class="mini" data-a="editItem" data-id="${i.id}">編集</button></div>` : ''}</div>`; };
+     ${par ? `<div class="acts">${isCar(i) ? '' : `<button class="mini" data-a="moveItem" data-id="${i.id}">移動</button>`}<button class="mini" data-a="editItem" data-id="${i.id}">編集</button></div>` : ''}</div>`; };
   const branch = (i, depth, guard) => { if (guard.has(i.id) || !visible(i)) return ''; guard.add(i.id);
     const ch = kids(i.id);
     return row(i, depth) + (i.isBag && !ch.length && !todo ? `<div class="sub" style="margin:0 0 6px ${depth * 24 + 30}px">まだ中身がありません</div>` : '') + ch.map(c => branch(c, depth + 1, guard)).join(''); };
@@ -485,12 +488,12 @@ function itemsHTML(par) {
   const ls = loose.map(i => branch(i, 0, guard)).join('');
   if (ls) body += (bags.length ? '<div class="bagh">かばんに入れないもの</div>' : '') + ls;
   topBags.forEach(b => { const h = branch(b, 0, guard); if (h) body += '<div style="height:8px"></div>' + h; });
-  const chips = bags.length && par ? `<div class="sub" style="margin:2px 0 0">入れる先</div><div class="chips" style="margin:0 0 8px">${[['','かばんなし'], ...bags.map(b => [b.id, (bags.some(x => x.id === b.bag) ? '👝 ' : '🧳 ') + plain(b.name)])].map(([v,l]) => `<label><input type="radio" name="itembag" data-a="itemBag" data-v="${v}" ${S.itemBag === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>` : '';
+  const chips = bags.length && par ? `<div class="sub" style="margin:2px 0 0">入れる先</div><div class="chips" style="margin:0 0 8px">${[['','かばんなし'], ...bags.map(b => [b.id, bagMark(b) + plain(b.name)])].map(([v,l]) => `<label><input type="radio" name="itembag" data-a="itemBag" data-v="${v}" ${S.itemBag === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>` : '';
   const done = list.filter(i => i.done).length;
   return `<div class="bar"><h2>持ち物リスト</h2><div class="sub"><b>${done}</b> / ${list.length} 準備できた</div></div>
    ${par ? `<form data-f="itemquick" class="qadd"><input type="text" name="name" placeholder="持ち物を入力して「追加」" autocomplete="off"><button class="btn" type="submit">追加</button></form>${chips}` : ''}
-   <div class="bar"><div class="seg"><button class="${S.itemFilter === 'all' ? 'on' : ''}" data-a="filterItems" data-v="all">すべて</button><button class="${S.itemFilter === 'todo' ? 'on' : ''}" data-a="filterItems" data-v="todo">まだ</button></div>${par ? '<div style="display:flex;gap:6px"><button class="mini" data-a="addBag">🧳＋かばん</button><button class="mini" data-a="copyItemsModal">コピー</button></div>' : ''}</div>
-   ${body || `<div class="empty">${list.length ? 'ぜんぶ準備できました 🎉' : 'まだ持ち物がありません。<br>キャリーバッグやポーチは「🧳 ＋かばん」から入れると、中身をまとめられます'}</div>`}`;
+   <div class="bar"><div class="seg"><button class="${S.itemFilter === 'all' ? 'on' : ''}" data-a="filterItems" data-v="all">すべて</button><button class="${S.itemFilter === 'todo' ? 'on' : ''}" data-a="filterItems" data-v="todo">まだ</button></div>${par ? '<div style="display:flex;gap:6px"><button class="mini" data-a="addBag">＋入れ物</button><button class="mini" data-a="copyItemsModal">コピー</button></div>' : ''}</div>
+   ${body || `<div class="empty">${list.length ? 'ぜんぶ準備できました 🎉' : 'まだ持ち物がありません。<br>キャリーバッグ・ポーチ・車は「＋入れ物」から入れると、中身をまとめられます'}</div>`}`;
 }
 
 /* ---- 準備タスク ---- */
@@ -777,12 +780,13 @@ function expForm(id) {
 }
 function itemForm(id, asBag) {
   const it = id ? S.items.find(x => x.id === id) : null;
-  const d = it || { name:'', qty:1, assignee:'', memo:'', isBag: !!asBag, bag: S.itemBag };
+  const d = it || { name:'', memo:'', isBag: !!asBag, kind: 'bag', bag: asBag ? '' : S.itemBag };
   const ng = new Set(it ? [it.id, ...itemTree().desc(it.id).map(x => x.id)] : []);
   const bags = S.items.filter(x => x.isBag && !ng.has(x.id)).sort(sortOrd);
-  openModal(d.isBag ? (it ? 'かばんを編集' : 'かばんを追加') : (it ? '持ち物を編集' : '持ち物を追加'), `<form data-f="item" data-id="${it ? it.id : ''}" data-bag="${d.isBag ? 1 : ''}">
-   ${inp('name', d.isBag ? 'かばんの名前(キャリーバッグ、リュックなど)' : '持ち物', d.name, 'text', 'required')}
-   ${bags.length ? `<label class="f">${d.isBag ? 'このかばんを入れる先(ポーチをキャリーバッグに入れる、など)' : '入れるかばん'}</label><select name="bag"><option value="">${d.isBag ? 'どこにも入れない' : 'かばんに入れない'}</option>${bags.map(b => `<option value="${b.id}" ${d.bag === b.id ? 'selected' : ''}>🧳 ${bagPath(b.id)}</option>`).join('')}</select>` : ''}
+  openModal(d.isBag ? (it ? (isCar(d) ? '車を編集' : 'かばんを編集') : 'かばん・車を追加') : (it ? '持ち物を編集' : '持ち物を追加'), `<form data-f="item" data-id="${it ? it.id : ''}" data-bag="${d.isBag ? 1 : ''}">
+   ${d.isBag ? `<label class="f">種類</label><div class="chips">${[['bag','🧳 かばん'],['car','🚗 車']].map(([k,l]) => `<label><input type="radio" name="kind" value="${k}" ${(d.kind || 'bag') === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div><div class="sub" style="margin-top:4px">車は一番外の入れ物です(車の中にかばんや持ち物を入れられます)</div>` : ''}
+   ${inp('name', d.isBag ? '名前(キャリーバッグ、ポーチ、車など)' : '持ち物', d.name, 'text', 'required')}
+   ${bags.length && !isCar(d) ? `<div id="bagSel"><label class="f">${d.isBag ? 'このかばんを入れる先(ポーチをキャリーバッグに入れる、など)' : '入れるかばん'}</label><select name="bag"><option value="">${d.isBag ? 'どこにも入れない' : 'かばんに入れない'}</option>${bags.map(b => `<option value="${b.id}" ${d.bag === b.id ? 'selected' : ''}>${bagMark(b)}${bagPath(b.id)}</option>`).join('')}</select></div>` : ''}
    ${area('memo','メモ',d.memo)}
    ${d.isBag && it ? '<div class="sub" style="margin-top:6px">かばんを消しても中身は消えず、ひとつ外側に出ます</div>' : ''}
    ${acts('保存する', it ? `<button class="btn ng" type="button" data-a="delItem" data-id="${it.id}">削除</button>` : '')}</form>`);
@@ -837,7 +841,7 @@ const submitters = {
   },
   item(fd, f) {
     const id = f.dataset.id; const isBag = !!f.dataset.bag;
-    const data = { name: val(fd,'name'), memo: val(fd,'memo'), isBag, bag: val(fd,'bag') };
+    const kind = isBag ? (val(fd,'kind') || 'bag') : ''; const data = { name: val(fd,'name'), memo: val(fd,'memo'), isBag, kind, bag: kind === 'car' ? '' : val(fd,'bag') };
     if (id) fire(updateDoc(itRef(id), data)); else { const ref = doc(collection(db,'trips',S.tripId,'items')); fire(setDoc(ref, { ...data, done: false, order: Date.now() })); if (isBag) S.itemBag = ref.id; }
     closeModal(); toast('保存しました');
   },
@@ -983,25 +987,14 @@ const H = {
   moveItem(d) {
     const it = S.items.find(x => x.id === d.id); if (!it) return;
     const { kids, roots, desc } = itemTree(); const ng = new Set([it.id, ...desc(it.id).map(x => x.id)]);
+    if (isCar(it)) return toast('車は一番外の入れ物なので、移動できません');
     const par = roots.some(r => r.id === it.id) ? '' : it.bag;
-    const sib = par ? kids(par) : roots.filter(r => !!r.isBag === !!it.isBag); const k = sib.findIndex(x => x.id === it.id);
-    const dests = [['', 'かばんに入れない'], ...S.items.filter(x => x.isBag && !ng.has(x.id)).sort(sortOrd).map(b => [b.id, '🧳 ' + bagPath(b.id)])];
-    openModal(`「${plain(it.name)}」を移動`, `<div class="sub">入れる先をタップ</div><div class="mvlist">${dests.map(([v,l]) => `<button type="button" class="${v === par ? 'cur' : ''}" data-a="doMoveItem" data-id="${it.id}" data-to="${v}" ${v === par ? 'disabled' : ''}>${v === par ? '✓ ' : ''}${l}${v === par ? '(今ここ)' : ''}</button>`).join('')}</div>
-     <div class="sub">同じ所の中での並び順</div><div class="eact"><button class="mini" data-a="orderItem" data-id="${it.id}" data-dir="-1" ${k <= 0 ? 'disabled' : ''}>↑ 上へ</button><button class="mini" data-a="orderItem" data-id="${it.id}" data-dir="1" ${k < 0 || k >= sib.length - 1 ? 'disabled' : ''}>↓ 下へ</button></div>`);
+    const dests = [['', 'かばんに入れない'], ...S.items.filter(x => x.isBag && !ng.has(x.id)).sort(sortOrd).map(b => [b.id, bagMark(b) + bagPath(b.id)])];
+    openModal(`「${plain(it.name)}」を移動`, `<div class="sub">入れる先をタップ</div><div class="mvlist">${dests.map(([v,l]) => `<button type="button" class="${v === par ? 'cur' : ''}" data-a="doMoveItem" data-id="${it.id}" data-to="${v}" ${v === par ? 'disabled' : ''}>${v === par ? '✓ ' : ''}${l}${v === par ? '(今ここ)' : ''}</button>`).join('')}</div>`);
   },
   doMoveItem(d) {
     closeModal(); fire(updateDoc(itRef(d.id), { bag: d.to || '', order: Date.now() }));
     toast(d.to ? bagPath(d.to) + ' に入れました' : 'かばんから出しました');
-  },
-  orderItem(d) {
-    const it = S.items.find(x => x.id === d.id); if (!it) return; const { kids, roots } = itemTree();
-    const par = roots.some(r => r.id === it.id) ? '' : it.bag;
-    const sib = par ? kids(par) : roots.filter(r => !!r.isBag === !!it.isBag); const k = sib.findIndex(x => x.id === it.id); const j = k + Number(d.dir);
-    if (k < 0 || j < 0 || j >= sib.length) return;
-    const a = sib[k], b = sib[j]; const oa = a.order ?? 0, ob = b.order ?? 0;
-    if (oa === ob) fire(updateDoc(itRef(a.id), { order: ob + Number(d.dir) }));
-    else { fire(updateDoc(itRef(a.id), { order: ob })); fire(updateDoc(itRef(b.id), { order: oa })); }
-    closeModal(); toast(Number(d.dir) < 0 ? '上へ動かしました' : '下へ動かしました');
   },
   itemBag(d) { S.itemBag = d.v; render(); },
   copyItemsModal() {
@@ -1051,6 +1044,7 @@ document.addEventListener('click', e => {
   const fn = H[b.dataset.a]; if (fn) { e.stopPropagation(); fn(b.dataset, b, e); }
 });
 document.addEventListener('change', e => {
+  if (e.target.name === 'kind') { const w = document.getElementById('bagSel'); if (w) w.style.display = e.target.value === 'car' ? 'none' : ''; }
   const k = e.target.dataset && e.target.dataset.opt; if (k) { S.sh[k] = e.target.checked; render(); }
 });
 
