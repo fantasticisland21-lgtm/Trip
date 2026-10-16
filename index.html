@@ -49,6 +49,8 @@ header.top .ver{display:block;font-size:11px;font-weight:400;color:var(--sub)}
 .tk-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
 .tag.ng{background:#ffe2dd;color:#c4403b}
 .tplist .chk{margin:6px 0}
+.dep{display:flex;align-items:center;gap:10px;background:#f1f1ef;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:15px}.dep b{font-size:18px;font-variant-numeric:tabular-nums}.dep .mini{margin-left:auto;min-height:32px;padding:2px 10px}
+.sdep{display:flex;gap:10px;align-items:center;background:#f1f1ef;border-radius:8px;padding:10px 12px;margin:0 0 10px;font-size:20px;font-weight:600;break-inside:avoid}.sdep .stime{flex-basis:auto}
 .verfoot{text-align:center;color:var(--sub);font-size:12px;margin-top:18px}
 header.top .who{font-size:12px;opacity:.9;max-width:40vw;display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 header.top button{background:var(--main2);border:0;color:var(--ink);border-radius:10px;padding:8px 12px}
@@ -192,7 +194,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v11.3';
+const VERSION = 'v12';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -320,7 +322,11 @@ function sortDay(date) {
 }
 
 /* ================= 画面 ================= */
+let printing = false;
+window.addEventListener('beforeprint', () => { printing = true; });
+window.addEventListener('afterprint', () => { printing = false; setTimeout(render, 0); });
 function render() {
+  if (printing) return;
   const app = $('#app');
   if (!S.ready) { app.innerHTML = '<div class="center">読みこみ中…</div>'; return; }
   if (!S.user) { app.innerHTML = authHTML(); return; }
@@ -372,9 +378,16 @@ function scheduleHTML(t, par) {
   let h = `<div class="bar"><div class="seg">${[['timeline','時間'],['cards','カード']].map(([v,l]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}">${l}</button>`).join('')}</div>${par ? '<button class="btn" data-a="addEv">＋予定</button>' : ''}</div>`;
   return h + days.map((d,i) => dayHTML(d, i, par, S.view === 'cards')).join('');
 }
+const depOf = date => ((curTrip() || {}).departs || {})[date];
+function depHTML(date, i, par) {
+  const d = depOf(date);
+  if (d && d.time) return `<div class="dep">🚪 <b>${esc(tt(d.time))}</b><span>${plain(d.from || (i ? 'ホテル' : '家'))}を出発</span>${par ? `<button class="mini" data-a="editDep" data-d="${date}" data-i="${i}">編集</button>` : ''}</div>`;
+  return par ? `<div style="margin:6px 0"><button class="mini" data-a="editDep" data-d="${date}" data-i="${i}">🚪 ＋出発時刻</button></div>` : '';
+}
 function dayHTML(date, i, par, cards) {
   const list = dayEvents(date);
   return `<div class="dayh"><h2><span>${i + 1}日め</span> ${fmtD(date)}</h2><div>${par && list.length > 1 ? `<button class="mini" data-a="sortDay" data-d="${date}">時刻順</button> ` : ''}${par ? `<button class="mini" data-a="addEv" data-d="${date}">＋</button>` : ''}</div></div>
+   ${depHTML(date, i, par)}
    ${list.length ? `<div class="${cards ? 'grid' : ''}">${list.map((e,k) => evHTML(e, k, list.length, par)).join('')}</div>` : '<div class="sub" style="padding:6px">予定はまだありません</div>'}`;
 }
 /* 時刻: 分の位置を右にそろえ、↓は「:」の真下に置く */
@@ -573,7 +586,8 @@ function shioriHTML(t) {
   }
   days.forEach((d,i) => {
     const list = dayEvents(d);
-    pages += `<section class="page"><div class="sday"><span>${i + 1}日め</span>${fmtD(d)}</div>` + (list.length ? list.map((e,k) => {
+    const dp = depOf(d);
+    pages += `<section class="page"><div class="sday"><span>${i + 1}日め</span>${fmtD(d)}</div>` + (dp && dp.time ? `<div class="sdep"><span>🚪</span><div class="stime">${esc(tt(dp.time))}</div><div>${R(dp.from || (i ? 'ホテル' : '家{いえ}'))}を でる</div></div>` : '') + (list.length ? list.map((e,k) => {
       const tbd = e.confirmed === false;
       const time = tbd ? '<span class="tbdlabel">みてい</span>' : (e.start ? esc(tt(e.start)) + (e.end ? `<small>〜${esc(tt(e.end))}</small>` : '') : '');
       const place = o.place && e.place ? `<div class="smeta">🗺️ ${R(e.place)}${e.address ? ' (' + esc(e.address) + ')' : ''}</div>` : '';
@@ -684,6 +698,15 @@ function taskForm(id) {
    ${area('memo','メモ',d.memo)}
    <label class="chk"><input type="checkbox" name="done" ${d.done ? 'checked' : ''}>終わった</label>
    ${acts('保存する', x ? `<button class="btn ng" type="button" data-a="delTask" data-id="${x.id}">削除</button>` : '')}</form>`);
+}
+function depForm(date, i) {
+  const d = depOf(date) || { time:'', from: i ? 'ホテル' : '家' };
+  openModal(`${fmtD(date)}の出発`, `<form data-f="dep" data-d="${date}">
+   ${inp('time','出発する時刻',d.time,'time','required')}
+   ${inp('from','どこから出発する',d.from,'text','list="depFrom"')}
+   <datalist id="depFrom"><option value="家"><option value="ホテル"></datalist>
+   <div class="sub" style="margin-top:4px">しおりには「家を でる」のように出ます。「家{いえ}」と書くとふりがなが付きます</div>
+   ${acts('保存する', depOf(date) ? `<button class="btn ng" type="button" data-a="delDep" data-d="${date}">消す</button>` : '')}</form>`);
 }
 function budgetForm() {
   const t = curTrip(); const b = t.budget || {}; const bc = b.cats || {};
@@ -805,6 +828,11 @@ const submitters = {
     closeModal(); if (!n) return toast('追加するものがありませんでした');
     fire(b.commit()); toast(n + '件追加しました(期限はあとで変えられます)');
   },
+  dep(fd, f) {
+    const t = curTrip(); const date = f.dataset.d;
+    const departs = { ...(t.departs || {}), [date]: { time: val(fd,'time'), from: val(fd,'from') } };
+    fire(updateDoc(doc(db,'trips',S.tripId), { departs })); closeModal(); toast('保存しました');
+  },
   rename(fd) {
     const name = val(fd,'name'); if (!name) return;
     fire(updateDoc(doc(db,'trips',S.tripId), { name })); closeModal(); toast('名前を変えました');
@@ -826,7 +854,7 @@ async function duplicateTrip(srcId, name, newStart) {
     const src = S.trips.find(t => t.id === srcId); const off = diffDays(src.start, newStart); const dur = diffDays(src.start, src.end);
     const nref = doc(collection(db,'trips')); const b = writeBatch(db);
     const parents = [...new Set([...(src.parents || []), S.email])];
-    b.set(nref, { name, dest: src.dest || '', start: newStart, end: addDays(newStart, dur), people: src.people || '', notice: src.notice || '', memo: src.memo || '', ...(src.budget ? { budget: src.budget } : {}), parents, viewers: src.viewers || [], createdBy: S.email, createdAt: serverTimestamp() });
+    b.set(nref, { name, dest: src.dest || '', start: newStart, end: addDays(newStart, dur), people: src.people || '', notice: src.notice || '', memo: src.memo || '', ...(src.budget ? { budget: src.budget } : {}), ...(src.departs ? { departs: Object.fromEntries(Object.entries(src.departs).map(([k,v]) => [addDays(k, off), v])) } : {}), parents, viewers: src.viewers || [], createdBy: S.email, createdAt: serverTimestamp() });
     const [es, cs, its, tks] = await Promise.all([getDocs(collection(db,'trips',srcId,'events')), getDocs(collection(db,'trips',srcId,'candidates')), getDocs(collection(db,'trips',srcId,'items')), getDocs(collection(db,'trips',srcId,'tasks'))]);
     tks.docs.forEach(d => { const x = d.data(); b.set(doc(collection(db,'trips',nref.id,'tasks')), { ...x, done: false, due: x.due ? addDays(x.due, off) : '' }); });
     its.docs.forEach(d => { b.set(doc(collection(db,'trips',nref.id,'items')), { ...d.data(), done: false }); });
@@ -865,6 +893,8 @@ const H = {
   closeTrip() { closeTrip(); },
   newTrip() { tripForm(null); },
   editTrip() { tripForm(curTrip()); },
+  editDep(d) { depForm(d.d, Number(d.i)); },
+  delDep(d) { const t = curTrip(); const departs = { ...(t.departs || {}) }; delete departs[d.d]; fire(updateDoc(doc(db,'trips',S.tripId), { departs })); closeModal(); toast('消しました'); },
   renameTrip() { const t = curTrip(); openModal('旅行の名前を変える', `<form data-f="rename">${inp('name','旅行の名前',t.name,'text','required')}${acts('保存する')}</form>`); setTimeout(() => { const i = document.querySelector('#modal input[name=name]'); if (i) { i.focus(); i.select(); } }, 50); },
   dupTrip(d) {
     const t = S.trips.find(x => x.id === d.id);
@@ -936,7 +966,7 @@ const H = {
   editExp(d) { const x = S.expenses.find(e => e.id === d.id); if (x && x.fromResv && S.resvs.some(r => r.id === x.resvId)) { resvForm(x.resvId); toast('予約から入った支出は、予約の画面で直します'); } else expForm(d.id); },
   delExp(d) { closeModal(); fire(deleteDoc(exRef(d.id))); toast('削除しました'); },
   editBudget() { budgetForm(); },
-  print() { window.print(); },
+  print() { closeModal(); document.activeElement && document.activeElement.blur(); printing = true; setTimeout(() => { window.print(); printing = false; render(); }, 30); },
   exportJson() { exportJson(); },
   mclose(d, b, e) { if (b.classList.contains('mback') && e.target !== b) return; closeModal(); }
 };
