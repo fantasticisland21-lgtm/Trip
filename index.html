@@ -200,7 +200,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v13.6';
+const VERSION = 'v13.7';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -469,11 +469,13 @@ const isCar = i => !!(i && i.isBag && i.kind === 'car');
 // 車は🚗、車の中や一番外のかばんは🧳、かばんの中のかばんは👝
 const bagMark = b => isCar(b) ? '🚗 ' : S.items.some(x => x.isBag && !isCar(x) && x.id === b.bag) ? '👝 ' : '🧳 ';
 const bagIcon = (i, depth) => i.isBag ? bagMark(i) : '';
+// ポーチ(かばんの中のかばん)は見出しにせず、入っているかばんの一覧の中に段にして出す
+const isPouch = b => b.isBag && bagMark(b) === '👝 ';
 function bagPath(id) { const names = [], vis = new Set(); let cur = S.items.find(x => x.id === id); while (cur && !vis.has(cur.id)) { vis.add(cur.id); names.unshift(plain(cur.name)); cur = S.items.find(x => x.id === cur.bag && x.isBag); } return names.join(' › '); }
 // 入れ物を「車 → その中のかばん → さらに中のかばん…」の順に並べる
 function containerOrder() {
   const { roots, kids } = itemTree(); const out = [], seen = new Set();
-  const go = b => { if (seen.has(b.id)) return; seen.add(b.id); out.push(b); kids(b.id).filter(x => x.isBag).forEach(go); };
+  const go = b => { if (seen.has(b.id)) return; seen.add(b.id); if (!isPouch(b)) out.push(b); kids(b.id).filter(x => x.isBag).forEach(go); };
   roots.filter(isCar).forEach(go); roots.filter(r => r.isBag && !isCar(r)).forEach(go);
   const key = (c, i) => c.secOrder ?? (1e9 + i);
   return out.map((c, i) => [c, key(c, i)]).sort((a,b) => a[1] - b[1]).map(x => x[0]);
@@ -485,16 +487,18 @@ function itemsHTML(par) {
   const todo = S.itemFilter === 'todo';
   const visible = i => !todo || !i.done || desc(i.id).some(x => !x.done);
   const row = (i, depth) => { const n = i.isBag ? desc(i.id).filter(x => !x.isBag) : null;
-    return `<div class="item ${i.isBag ? 'bag' : ''} ${i.done ? 'done' : ''}"><button class="ck" data-a="toggleItem" data-id="${i.id}" aria-label="準備できた" ${par ? '' : 'disabled'}>${i.done ? '✓' : ''}</button>
+    return `<div class="item ${i.isBag ? 'bag' : ''} ${i.done ? 'done' : ''}" style="${depth ? `margin-left:${depth * 24}px` : ''}"><button class="ck" data-a="toggleItem" data-id="${i.id}" aria-label="準備できた" ${par ? '' : 'disabled'}>${i.done ? '✓' : ''}</button>
      <div class="ib"><div class="ett">${bagIcon(i, depth)}${plain(i.name)}${n && n.length ? ` <span class="sub">${n.filter(x => x.done).length}/${n.length}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
      ${par ? `<div class="acts">${isCar(i) ? '' : `<button class="mini" data-a="moveItem" data-id="${i.id}">移動</button>`}<button class="mini" data-a="editItem" data-id="${i.id}">編集</button></div>` : ''}</div>`; };
   // 入れ物ごとの一覧を作る(準備のときに見やすいように、中身は1段だけ)
-  const sec = (title, head, items, emptyMsg) => { const rows = items.filter(visible).map(x => row(x, 0)).join('');
+  const tree = (x, depth, g) => { if (g.has(x.id) || !visible(x)) return ''; g.add(x.id); return row(x, depth) + (isPouch(x) ? kids(x.id).map(c => tree(c, depth + 1, g)).join('') : ''); };
+  const flat = (xs, g = new Set()) => xs.flatMap(x => { if (g.has(x.id)) return []; g.add(x.id); return [x, ...(isPouch(x) ? flat(kids(x.id), g) : [])]; });
+  const sec = (title, head, items, emptyMsg) => { const g = new Set(); const rows = items.map(x => tree(x, 0, g)).join('');
     if (!rows && todo) return ''; return title + head + (rows || `<div class="sub" style="padding:4px 2px 8px">${emptyMsg}</div>`); };
   let body = '';
   const loose = roots.filter(i => !i.isBag);
   if (loose.length) body += sec(bags.length ? '<div class="sech"><h3>入れ物なし</h3></div>' : '', '', loose, '');
-  containerOrder().forEach(c => { const ch = kids(c.id); const n = ch;
+  containerOrder().forEach(c => { const ch = kids(c.id); const n = flat(ch);
     body += sec(`<div class="sech"><h3>${bagMark(c)}${plain(c.name)}</h3><span class="sub">${n.filter(x => x.done).length}/${n.length}</span>${par ? `<button class="mini" data-a="editItem" data-id="${c.id}">編集</button>` : ''}</div>`, '', ch, 'まだ何もありません'); });
   const chips = bags.length && par ? `<div class="sub" style="margin:2px 0 0">入れる先</div><div class="chips" style="margin:0 0 8px">${[['','かばんなし'], ...bags.map(b => [b.id, bagMark(b) + plain(b.name)])].map(([v,l]) => `<label><input type="radio" name="itembag" data-a="itemBag" data-v="${v}" ${S.itemBag === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>` : '';
   const done = list.filter(i => i.done).length;
@@ -630,11 +634,11 @@ function shioriHTML(t) {
     ${o.notice && t.notice ? `<div class="sbox"><span class="ic">💡</span><div><b>みんなへのれんらく</b>${R(t.notice).replace(/\n/g, '<br>')}</div></div>` : ''}</section>`;
   if (o.items && S.items.length) {
     const { roots, kids } = itemTree();
-    const row = it => `<div class="sitem ${it.isBag ? 'sbag' : ''}"><div class="sbox2"></div><div>${bagIcon(it)}${R(it.name)}</div></div>`;
+    const row = (it, depth = 0) => `<div class="sitem ${it.isBag ? 'sbag' : ''}" style="padding-left:${depth * 30 + 2}px"><div class="sbox2"></div><div>${bagIcon(it)}${R(it.name)}</div></div>` + (isPouch(it) ? kids(it.id).map(c => row(c, depth + 1)).join('') : '');
     const head = t => `<div style="font-size:18px;font-weight:700;margin:18px 0 2px">${t}</div>`;
     const loose = roots.filter(i => !i.isBag);
-    pages += `<section class="page"><div class="sday"><span>🎒</span>もちもの</div>` + (loose.length ? (S.items.some(i => i.isBag) ? head('そのほか') : '') + loose.map(row).join('') : '')
-      + containerOrder().map(c => head(`${bagMark(c)}${R(c.name)}`) + (kids(c.id).map(row).join('') || '<div class="smeta" style="padding:6px 2px">なし</div>')).join('') + '</section>';
+    pages += `<section class="page"><div class="sday"><span>🎒</span>もちもの</div>` + (loose.length ? (S.items.some(i => i.isBag) ? head('そのほか') : '') + loose.map(x => row(x)).join('') : '')
+      + containerOrder().map(c => head(`${bagMark(c)}${R(c.name)}`) + (kids(c.id).map(x => row(x)).join('') || '<div class="smeta" style="padding:6px 2px">なし</div>')).join('') + '</section>';
   }
   days.forEach((d,i) => {
     const list = dayEvents(d);
