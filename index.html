@@ -54,6 +54,8 @@ header.top .ver{display:block;font-size:11px;font-weight:400;color:var(--sub)}
 .item.bag{background:#f7f7f5}
 .bagh{font-size:13px;color:var(--sub);margin:14px 0 2px}
 .sitem.sbag{font-weight:700}
+.mvlist{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px}.mvlist button{text-align:left;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px}.mvlist button.cur{background:var(--main2);font-weight:700}
+.item .acts{display:flex;gap:4px;flex:0 0 auto}
 .verfoot{text-align:center;color:var(--sub);font-size:12px;margin-top:18px}
 header.top .who{font-size:12px;opacity:.9;max-width:40vw;display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 header.top button{background:var(--main2);border:0;color:var(--ink);border-radius:10px;padding:8px 12px}
@@ -197,7 +199,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v13.1';
+const VERSION = 'v13.2';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -473,7 +475,7 @@ function itemsHTML(par) {
   const row = (i, depth) => { const n = i.isBag ? desc(i.id).filter(x => !x.isBag) : null;
     return `<div class="item ${i.isBag ? 'bag' : ''} ${i.done ? 'done' : ''}" style="margin-left:${depth * 24}px"><button class="ck" data-a="toggleItem" data-id="${i.id}" aria-label="準備できた" ${par ? '' : 'disabled'}>${i.done ? '✓' : ''}</button>
      <div class="ib"><div class="ett">${bagIcon(i, depth)}${plain(i.name)}${Number(i.qty) > 1 ? ` <span class="tag">×${esc(i.qty)}</span>` : ''}${i.assignee ? ` <span class="tag gray">${esc(i.assignee)}</span>` : ''}${n && n.length ? ` <span class="sub">${n.filter(x => x.done).length}/${n.length}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
-     ${par ? `<button class="mini" data-a="editItem" data-id="${i.id}">編集</button>` : ''}</div>`; };
+     ${par ? `<div class="acts"><button class="mini" data-a="moveItem" data-id="${i.id}">移動</button><button class="mini" data-a="editItem" data-id="${i.id}">編集</button></div>` : ''}</div>`; };
   const branch = (i, depth, guard) => { if (guard.has(i.id) || !visible(i)) return ''; guard.add(i.id);
     const ch = kids(i.id);
     return row(i, depth) + (i.isBag && !ch.length && !todo ? `<div class="sub" style="margin:0 0 6px ${depth * 24 + 30}px">まだ中身がありません</div>` : '') + ch.map(c => branch(c, depth + 1, guard)).join(''); };
@@ -979,6 +981,29 @@ const H = {
     if (it && it.isBag) { const b = writeBatch(db); S.items.filter(x => x.bag === d.id).forEach(x => b.update(itRef(x.id), { bag: it.bag || '' })); b.delete(itRef(d.id)); fire(b.commit()); }
     else fire(deleteDoc(itRef(d.id))); toast('削除しました'); },
   addBag() { itemForm(null, true); },
+  moveItem(d) {
+    const it = S.items.find(x => x.id === d.id); if (!it) return;
+    const { kids, roots, desc } = itemTree(); const ng = new Set([it.id, ...desc(it.id).map(x => x.id)]);
+    const par = roots.some(r => r.id === it.id) ? '' : it.bag;
+    const sib = par ? kids(par) : roots.filter(r => !!r.isBag === !!it.isBag); const k = sib.findIndex(x => x.id === it.id);
+    const dests = [['', 'かばんに入れない'], ...S.items.filter(x => x.isBag && !ng.has(x.id)).sort(sortOrd).map(b => [b.id, '🧳 ' + bagPath(b.id)])];
+    openModal(`「${plain(it.name)}」を移動`, `<div class="sub">入れる先をタップ</div><div class="mvlist">${dests.map(([v,l]) => `<button type="button" class="${v === par ? 'cur' : ''}" data-a="doMoveItem" data-id="${it.id}" data-to="${v}" ${v === par ? 'disabled' : ''}>${v === par ? '✓ ' : ''}${l}${v === par ? '(今ここ)' : ''}</button>`).join('')}</div>
+     <div class="sub">同じ所の中での並び順</div><div class="eact"><button class="mini" data-a="orderItem" data-id="${it.id}" data-dir="-1" ${k <= 0 ? 'disabled' : ''}>↑ 上へ</button><button class="mini" data-a="orderItem" data-id="${it.id}" data-dir="1" ${k < 0 || k >= sib.length - 1 ? 'disabled' : ''}>↓ 下へ</button></div>`);
+  },
+  doMoveItem(d) {
+    closeModal(); fire(updateDoc(itRef(d.id), { bag: d.to || '', order: Date.now() }));
+    toast(d.to ? bagPath(d.to) + ' に入れました' : 'かばんから出しました');
+  },
+  orderItem(d) {
+    const it = S.items.find(x => x.id === d.id); if (!it) return; const { kids, roots } = itemTree();
+    const par = roots.some(r => r.id === it.id) ? '' : it.bag;
+    const sib = par ? kids(par) : roots.filter(r => !!r.isBag === !!it.isBag); const k = sib.findIndex(x => x.id === it.id); const j = k + Number(d.dir);
+    if (k < 0 || j < 0 || j >= sib.length) return;
+    const a = sib[k], b = sib[j]; const oa = a.order ?? 0, ob = b.order ?? 0;
+    if (oa === ob) fire(updateDoc(itRef(a.id), { order: ob + Number(d.dir) }));
+    else { fire(updateDoc(itRef(a.id), { order: ob })); fire(updateDoc(itRef(b.id), { order: oa })); }
+    closeModal(); toast(Number(d.dir) < 0 ? '上へ動かしました' : '下へ動かしました');
+  },
   itemBag(d) { S.itemBag = d.v; render(); },
   copyItemsModal() {
     const others = S.trips.filter(t => t.id !== S.tripId);
