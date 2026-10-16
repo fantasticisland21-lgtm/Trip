@@ -84,8 +84,8 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .dhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}.dhead>div{min-width:0;flex:1}
 .tname{display:flex;align-items:center;gap:6px}.tname h1{word-break:break-word}.tname .mini{flex:0 0 auto;min-height:30px;padding:2px 10px;font-size:13px}
 .back{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;white-space:nowrap}
-.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px -14px;padding:6px 14px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
-.tabs button{flex:1 1 auto;background:#fff;border:1px solid var(--line);color:var(--sub);border-radius:8px;padding:6px 8px;min-height:38px;font-size:15px;white-space:nowrap}
+.tabs{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin:8px -14px;padding:6px 14px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
+.tabs button{grid-column:span 2;background:#fff;border:1px solid var(--line);color:var(--sub);border-radius:8px;padding:6px 2px;min-height:40px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:clip}
 .tabs button.on{background:var(--main2);border-color:#c7c6c4;color:var(--ink);font-weight:700}
 .note{background:#e7f3f8;color:#28698f;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
 .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}
@@ -192,7 +192,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v11.2';
+const VERSION = 'v11.3';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -357,11 +357,11 @@ function listHTML() {
 
 function detailHTML(t) {
   const par = isParent(t);
-  const tabs = [['schedule','予定'],['cands','行き先候補'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['shiori','しおり'],['settings','設定']];
+  const tabs = [['schedule','予定'],['cands','行き先'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['shiori','しおり'],['settings','設定']];
   if (S.tab === 'budget' && !par) S.tab = 'schedule';
   const body = S.tab === 'schedule' ? scheduleHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'items' ? itemsHTML(par) : S.tab === 'tasks' ? tasksHTML(t,par) : S.tab === 'gifts' ? giftsHTML(par) : S.tab === 'budget' ? budgetHTML(t,par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
   return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><div class="tname"><h1>${plain(t.name)}</h1>${par ? '<button class="mini" data-a="renameTrip">✏️ 名前</button>' : ''}</div><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div></div></div>
-  <nav class="tabs">${tabs.map(([k,l]) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}">${l}</button>`).join('')}</nav>
+  <nav class="tabs">${tabs.map(([k,l],i) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}"${i === 5 ? ` style="grid-column:${11 - tabs.length} / span 2"` : ''}>${l}</button>`).join('')}</nav>
   ${par ? '' : '<div class="note">この旅行は「見るだけ」です(変更は保護者のアカウントでできます)</div>'}
   ${body}`;
 }
@@ -388,7 +388,7 @@ function evHTML(e, i, n, par) {
   return `<div class="ev ${e.confirmed === false ? 'tbd' : ''}">
    ${etimeHTML(e.start, e.end)}
    <div class="ebody"><div class="ett">${plain(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}</div>
-   ${e.place ? `<div class="sub">📍 ${plain(e.place)}${e.address ? '(' + esc(e.address) + ')' : ''}</div>` : (e.address ? `<div class="sub">📍 ${esc(e.address)}</div>` : '')}
+   ${e.place ? `<div class="sub">🗺️ ${plain(e.place)}${e.address ? '(' + esc(e.address) + ')' : ''}</div>` : (e.address ? `<div class="sub">🗺️ ${esc(e.address)}</div>` : '')}
    ${rv ? `<div class="sub">🎫 ${esc(rv.target)}</div>` : ''}
    ${links ? `<div class="links">${links}</div>` : ''}
    ${e.memo ? `<div class="memo">${esc(e.memo)}</div>` : ''}
@@ -563,10 +563,10 @@ function shioriHTML(t) {
   const o = S.sh; const R = s => ruby(s, o.ruby);
   const opt = (k, label) => `<label class="chk"><input type="checkbox" data-opt="${k}" ${o[k] ? 'checked' : ''}>${label}</label>`;
   const days = allDays(t);
-  let pages = `<section class="page"><div style="font-size:44px;line-height:1">✈️</div><div class="stitle">${R(t.name)}</div>
+  let pages = `<section class="page"><div class="stitle">${R(t.name)}</div>
     <div class="sprop"><span class="k">📅 いつ</span><span>${fmtD(t.start)} 〜 ${fmtD(t.end)}</span></div>
-    ${t.dest ? `<div class="sprop"><span class="k">📍 どこへ</span><span>${R(t.dest)}</span></div>` : ''}
-    ${o.people && t.people ? `<div class="sprop"><span class="k">👪 だれと</span><span>${R(t.people)}</span></div>` : ''}
+    ${t.dest ? `<div class="sprop"><span class="k">🗺️ どこへ</span><span>${R(t.dest)}</span></div>` : ''}
+    ${o.people && t.people ? `<div class="sprop"><span class="k">だれと</span><span>${R(t.people)}</span></div>` : ''}
     ${o.notice && t.notice ? `<div class="sbox"><span class="ic">💡</span><div><b>みんなへのれんらく</b>${R(t.notice).replace(/\n/g, '<br>')}</div></div>` : ''}</section>`;
   if (o.items && S.items.length) {
     pages += `<section class="page"><div class="sday"><span>🎒</span>もちもの</div>` + S.items.slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0)).map(it => `<div class="sitem"><div class="sbox2"></div><div>${R(it.name)}${Number(it.qty) > 1 ? ' × ' + esc(it.qty) : ''}${it.assignee ? ` <small>(${R(it.assignee)})</small>` : ''}</div></div>`).join('') + '</section>';
@@ -576,7 +576,7 @@ function shioriHTML(t) {
     pages += `<section class="page"><div class="sday"><span>${i + 1}日め</span>${fmtD(d)}</div>` + (list.length ? list.map((e,k) => {
       const tbd = e.confirmed === false;
       const time = tbd ? '<span class="tbdlabel">みてい</span>' : (e.start ? esc(tt(e.start)) + (e.end ? `<small>〜${esc(tt(e.end))}</small>` : '') : '');
-      const place = o.place && e.place ? `<div class="smeta">📍 ${R(e.place)}${e.address ? ' (' + esc(e.address) + ')' : ''}</div>` : '';
+      const place = o.place && e.place ? `<div class="smeta">🗺️ ${R(e.place)}${e.address ? ' (' + esc(e.address) + ')' : ''}</div>` : '';
       const map = o.map && mapLink(e) ? `<div class="smeta">地図: ${aLink(mapLink(e), esc(mapLink(e)))}</div>` : '';
       const url = o.url && safeUrl(e.url) ? `<div class="smeta">サイト: ${aLink(safeUrl(e.url), esc(e.url))}</div>` : '';
       const rain = o.rain && e.rainPlan ? `<div class="smeta">☔ あめのときは: ${R(e.rainPlan)}</div>` : '';
