@@ -108,14 +108,6 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
 .grid .ev{margin:0;flex-direction:column;gap:2px}
 .grid .etime{flex:none;justify-content:start;font-size:18px}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:8px 0}
-.cal .h{text-align:center;font-size:12px;color:var(--sub)}
-.cal button{min-height:54px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:2px;font-size:14px}
-.cal button.out{background:transparent;border-color:transparent;color:#bbb}
-.cal button.trip{background:var(--main2)}
-.cal button.sel{border:2px solid var(--main);font-weight:700}
-.cal .cnt{display:block;font-size:11px;color:var(--acc)}
-.calnav{display:flex;justify-content:space-between;align-items:center}
 label.f{display:block;margin:10px 0 2px;font-size:14px;color:var(--sub)}
 input[type=text],input[type=email],input[type=password],input[type=url],input[type=date],input[type=time],input[type=number],input[type=datetime-local],select,textarea{width:100%;padding:10px;border:1px solid #cfc9bd;border-radius:10px;background:#fff;font-size:16px;min-height:44px}
 textarea{min-height:70px}
@@ -199,7 +191,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v10.2';
+const VERSION = 'v11';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -228,7 +220,7 @@ const fire = p => Promise.resolve(p).catch(e => toast('保存できませんで�
 const S = {
   ready:false, user:null, email:'', authMode:'login', authErr:'',
   trips:[], tripMap:{parents:[], viewers:[]}, tripId:null,
-  tab:'schedule', view:'timeline', calSel:null, calMonth:null,
+  tab:'schedule', view:'timeline',
   events:[], cands:[], resvs:[], items:[], itemFilter:'all', gifts:[], giftFilter:'all', expenses:[], expFilter:'all', tasks:[], taskFilter:'todo', taskWho:'',
   unTrips:[], unSub:[],
   sh:{ items:true, ruby:true, place:true, map:false, url:false, rain:false, memo:false, resv:false, resvNo:false, notice:true, people:true }
@@ -284,7 +276,7 @@ function subscribeTrips() {
   }
 }
 function openTrip(id) {
-  unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.items = []; S.gifts = []; S.expenses = []; S.tasks = []; S.taskWho = ''; S.calSel = null; S.calMonth = null;
+  unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.items = []; S.gifts = []; S.expenses = []; S.tasks = []; S.taskWho = '';
   const listen = (k, name, tries) => onSnapshot(collection(db,'trips',id,name), snap => {
     S[k] = snap.docs.map(d => ({ id:d.id, ...d.data() })); render();
   }, err => {
@@ -375,8 +367,7 @@ function detailHTML(t) {
 /* ---- 予定 ---- */
 function scheduleHTML(t, par) {
   const days = allDays(t);
-  let h = `<div class="bar"><div class="seg">${[['timeline','時間'],['calendar','カレンダー'],['cards','カード']].map(([v,l]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}">${l}</button>`).join('')}</div>${par ? '<button class="btn" data-a="addEv">＋予定</button>' : ''}</div>`;
-  if (S.view === 'calendar') return h + calHTML(t, days, par);
+  let h = `<div class="bar"><div class="seg">${[['timeline','時間'],['cards','カード']].map(([v,l]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}">${l}</button>`).join('')}</div>${par ? '<button class="btn" data-a="addEv">＋予定</button>' : ''}</div>`;
   return h + days.map((d,i) => dayHTML(d, i, par, S.view === 'cards')).join('');
 }
 function dayHTML(date, i, par, cards) {
@@ -403,22 +394,6 @@ function evHTML(e, i, n, par) {
    ${par ? `<div class="eact"><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="1" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="mini" data-a="editEv" data-id="${e.id}">編集</button><button class="mini" data-a="dupEv" data-id="${e.id}">複製</button></div>` : ''}
    </div></div>`;
 }
-function calHTML(t, days, par) {
-  const sel = S.calSel || days[0] || today(); const m = S.calMonth || sel.slice(0,7);
-  const [Y, M] = m.split('-').map(Number); const first = new Date(Y, M-1, 1).getDay(); const last = new Date(Y, M, 0).getDate();
-  const tripDays = new Set(days); let cells = '';
-  for (let i = 0; i < first; i++) cells += '<button class="out" disabled></button>';
-  for (let d = 1; d <= last; d++) {
-    const ds = `${Y}-${pad(M)}-${d < 10 ? '0' + d : d}`; const c = S.events.filter(e => e.date === ds).length;
-    cells += `<button class="${tripDays.has(ds) ? 'trip' : ''} ${ds === sel ? 'sel' : ''}" data-a="calSel" data-d="${ds}">${d}${c ? `<span class="cnt">${c}件</span>` : ''}</button>`;
-  }
-  const nav = n => { const d = new Date(Y, M-1+n, 1); return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; };
-  const idx = days.indexOf(sel);
-  return `<div class="calnav"><button class="mini" data-a="calMonth" data-m="${nav(-1)}">‹</button><h2>${Y}年${M}月</h2><button class="mini" data-a="calMonth" data-m="${nav(1)}">›</button></div>
-   <div class="cal">${WD.map(w => `<div class="h">${w}</div>`).join('')}${cells}</div>
-   ${dayHTML(sel, Math.max(idx, 0), par, false)}`;
-}
-
 /* ---- 行き先候補 ---- */
 const CST = { consider:'検討中', adopt:'採用', skip:'見送り' };
 function candsHTML(par) {
@@ -433,12 +408,23 @@ function candsHTML(par) {
 }
 
 /* ---- 予約 ---- */
+// 予約に金額を入れると、予算の支出(expenses/resv_予約ID)を自動で作る
+const RCATS = ['move','stay','ticket','food','other'];
+const guessCat = s => /ホテル|宿|旅館|民宿|ペンション|泊/.test(s) ? 'stay' : /新幹線|飛行機|航空|電車|JR|バス|レンタカー|タクシー|フェリー|駐車/.test(s) ? 'move' : /チケット|入場|パス|USJ|ユニバ|券|ツアー/i.test(s) ? 'ticket' : /レストラン|食事|ランチ|ディナー|朝食|夕食|ごはん|カフェ/.test(s) ? 'food' : 'other';
+const rexId = rid => 'resv_' + rid;
+function syncResvExpense(rid, r) {
+  const ref = exRef(rexId(rid)); const old = S.expenses.find(x => x.id === rexId(rid));
+  if (r.amount == null) { if (old) fire(deleteDoc(ref)); return; }
+  const t = curTrip(); const day = String(r.useAt || '').slice(0, 10);
+  fire(setDoc(ref, { title: r.target, amount: r.amount, cat: r.cat || 'other', paid: !!r.paid, date: day && t && day >= t.start && day <= t.end ? day : '', payer: old ? old.payer || '' : '', resvId: rid, memo: '', fromResv: true, order: old ? old.order ?? Date.now() : Date.now() }));
+}
 function resvHTML(par) {
   const list = S.resvs.slice().sort((a,b) => String(a.useAt || '').localeCompare(String(b.useAt || '')));
   return `<div class="bar"><h2>予約の情報</h2>${par ? '<button class="btn" data-a="addResv">＋予約</button>' : ''}</div>
-   <div class="sub">宿・乗り物・チケット・お店など。予約番号はしおりに自動では載りません</div>
+   <div class="sub">宿・乗り物・チケット・お店など。金額を入れると予算にも自動で入ります。予約番号はしおりに自動では載りません</div>
    ${list.length ? list.map(r => `<div class="card"><div class="ett">🎫 ${esc(r.target)}</div>
     <div class="sub">${r.vendor ? '予約先: ' + esc(r.vendor) + '<br>' : ''}${r.useAt ? '利用日時: ' + esc(String(r.useAt).replace('T',' ')) + '<br>' : ''}${r.reservedOn ? '予約した日: ' + fmtD(r.reservedOn) + '<br>' : ''}${r.number ? '予約番号: <b>' + esc(r.number) + '</b>' : ''}</div>
+    ${par && r.amount != null ? `<div class="sub">💴 <b>${yen(r.amount)}</b> ${ECATL[r.cat] || ''} <span class="tag ${r.paid ? 'ok' : 'warn'}">${r.paid ? '払った' : 'これから払う'}</span> <span class="tag gray">予算に入っています</span></div>` : ''}
     <div class="links">${aLink(safeUrl(r.url), '予約サイト')}</div>
     ${r.memo ? `<div class="memo">${esc(r.memo)}</div>` : ''}
     ${par ? `<div class="eact"><button class="mini" data-a="editResv" data-id="${r.id}">編集</button></div>` : ''}</div>`).join('') : '<div class="empty">予約はまだありません</div>'}`;
@@ -548,7 +534,7 @@ function budgetHTML(t, par) {
    <div class="bar"><div class="seg">${seg}</div></div>
    ${shown.length ? shown.map(x => { const rv = S.resvs.find(r => r.id === x.resvId);
     return `<div class="item ${x.paid ? '' : ''}"><button class="ck" data-a="toggleExp" data-id="${x.id}" aria-label="払った" ${par ? '' : 'disabled'} style="${x.paid ? 'background:var(--acc);border-color:var(--acc)' : ''}">${x.paid ? '✓' : ''}</button>
-     <div class="ib"><div class="ett">${esc(x.title)} <span class="tag ${x.paid ? 'ok' : 'warn'}">${x.paid ? '払った' : 'これから'}</span></div>
+     <div class="ib"><div class="ett">${esc(x.title)} ${x.fromResv ? '<span class="tag">予約から</span>' : ''}<span class="tag ${x.paid ? 'ok' : 'warn'}">${x.paid ? '払った' : 'これから'}</span></div>
       <div class="sub">${ECATL[x.cat] && x.cat !== 'gift' ? ECATL[x.cat] : ECATL.other}・${x.date ? fmtD(x.date) : '旅行前・日付なし'}${x.payer ? '・👤 ' + esc(x.payer) : ''}</div>
       ${rv ? `<div class="sub">🎫 ${esc(rv.target)}</div>` : ''}${x.memo ? `<div class="sub">${esc(x.memo)}</div>` : ''}</div>
      <div class="amt">${yen(x.amount)}</div>
@@ -662,11 +648,16 @@ function candForm(id) {
 }
 function resvForm(id) {
   const r = id ? S.resvs.find(x => x.id === id) : null;
-  const d = r || { target:'', vendor:'', reservedOn:'', useAt:'', number:'', url:'', memo:'' };
+  const d = r || { target:'', vendor:'', reservedOn:'', useAt:'', number:'', url:'', memo:'', amount:null, cat:'', paid:false };
   openModal(r ? '予約を編集' : '予約を追加', `<form data-f="resv" data-id="${r ? r.id : ''}">
    ${inp('target','予約するもの(ホテル・新幹線・チケットなど)',d.target,'text','required')}${inp('vendor','予約先',d.vendor)}
    ${inp('reservedOn','予約した日',d.reservedOn,'date')}${inp('useAt','利用する日時',d.useAt,'datetime-local')}
-   ${inp('number','予約番号',d.number)}${inp('url','予約サイトのURL',d.url,'url','placeholder="https://"')}${area('memo','メモ',d.memo)}
+   ${inp('number','予約番号',d.number)}${inp('url','予約サイトのURL',d.url,'url','placeholder="https://"')}
+   <div class="sub" style="margin-top:14px"><b>お金(入れると予算に自動で入ります)</b></div>
+   ${inp('amount','金額(円)',d.amount ?? '','number','min="0" inputmode="numeric"')}
+   <label class="f">種類(選ばないと、予約するものの名前から自動で決めます)</label><div class="chips">${RCATS.map(k => `<label><input type="radio" name="cat" value="${k}" ${d.cat === k ? 'checked' : ''}><span>${ECATL[k]}</span></label>`).join('')}</div>
+   <label class="chk"><input type="checkbox" name="paid" ${d.paid ? 'checked' : ''}>もう払った</label>
+   ${area('memo','メモ',d.memo)}
    ${acts('保存する', r ? `<button class="btn ng" type="button" data-a="delResv" data-id="${r.id}">削除</button>` : '')}</form>`);
 }
 function giftForm(id) {
@@ -713,7 +704,8 @@ function expForm(id) {
    <label class="chk"><input type="checkbox" name="paid" ${d.paid ? 'checked' : ''}>もう払った</label>
    <label class="f">日付</label><select name="date"><option value="">旅行前・日付なし</option>${dayOptions(t, d.date)}</select>
    ${inp('payer','払った人(入れなくてもOK)',d.payer)}
-   <label class="f">関連する予約</label><select name="resvId"><option value="">予約なし</option>${S.resvs.map(r => `<option value="${r.id}" ${d.resvId === r.id ? 'selected' : ''}>${esc(r.target)}</option>`).join('')}</select>
+   <label class="f">関連する予約</label><select name="resvId"><option value="">予約なし</option>${S.resvs.filter(r => r.amount == null || d.resvId === r.id).map(r => `<option value="${r.id}" ${d.resvId === r.id ? 'selected' : ''}>${esc(r.target)}</option>`).join('')}</select>
+   <div class="sub" style="margin-top:4px">金額を入れた予約は自動で予算に入るので、ここで入れる必要はありません</div>
    ${area('memo','メモ',d.memo)}
    ${acts('保存する', x ? `<button class="btn ng" type="button" data-a="delExp" data-id="${x.id}">削除</button>` : '')}</form>`);
 }
@@ -767,9 +759,12 @@ const submitters = {
     closeModal(); toast('保存しました');
   },
   resv(fd, f) {
-    const id = f.dataset.id; const data = { target: val(fd,'target'), vendor: val(fd,'vendor'), reservedOn: val(fd,'reservedOn'), useAt: val(fd,'useAt'), number: val(fd,'number'), url: val(fd,'url'), memo: val(fd,'memo') };
-    if (id) fire(updateDoc(rvRef(id), data)); else fire(setDoc(doc(collection(db,'trips',S.tripId,'reservations')), data));
-    closeModal(); toast('保存しました');
+    const id = f.dataset.id; const amount = num(val(fd,'amount')); const target = val(fd,'target');
+    const data = { target, vendor: val(fd,'vendor'), reservedOn: val(fd,'reservedOn'), useAt: val(fd,'useAt'), number: val(fd,'number'), url: val(fd,'url'), memo: val(fd,'memo'), amount, cat: amount == null ? '' : (val(fd,'cat') || guessCat(target)), paid: fd.get('paid') === 'on' };
+    const ref = id ? rvRef(id) : doc(collection(db,'trips',S.tripId,'reservations'));
+    if (id) fire(updateDoc(ref, data)); else fire(setDoc(ref, data));
+    syncResvExpense(ref.id, data);
+    closeModal(); toast(amount != null ? '保存しました(予算にも入れました)' : '保存しました');
   },
   item(fd, f) {
     const id = f.dataset.id; const data = { name: val(fd,'name'), qty: Math.max(1, Number(val(fd,'qty')) || 1), assignee: val(fd,'assignee'), memo: val(fd,'memo') };
@@ -873,8 +868,6 @@ const H = {
   doDelTrip(d) { closeModal(); deleteTrip(d.id); },
   tab(d) { S.tab = d.t; render(); window.scrollTo(0,0); },
   view(d) { S.view = d.v; render(); },
-  calSel(d) { S.calSel = d.d; render(); },
-  calMonth(d) { S.calMonth = d.m; render(); },
   addEv(d) { evForm(null, d.d); },
   editEv(d) { evForm(d.id); },
   dupEv(d) {
@@ -895,7 +888,7 @@ const H = {
   },
   addResv() { resvForm(null); },
   editResv(d) { resvForm(d.id); },
-  delResv(d) { closeModal(); fire(deleteDoc(rvRef(d.id))); toast('削除しました'); },
+  delResv(d) { closeModal(); fire(deleteDoc(rvRef(d.id))); if (S.expenses.some(x => x.id === rexId(d.id))) fire(deleteDoc(exRef(rexId(d.id)))); toast('削除しました'); },
   filterItems(d) { S.itemFilter = d.v; render(); },
   toggleItem(d) { const it = S.items.find(x => x.id === d.id); if (it) fire(updateDoc(itRef(d.id), { done: !it.done })); },
   addItem() { itemForm(null); },
@@ -931,9 +924,9 @@ const H = {
      ${acts('追加する')}</form>`);
   },
   filterExp(d) { S.expFilter = d.v; render(); },
-  toggleExp(d) { const x = S.expenses.find(e => e.id === d.id); if (x) fire(updateDoc(exRef(d.id), { paid: !x.paid })); },
+  toggleExp(d) { const x = S.expenses.find(e => e.id === d.id); if (!x) return; fire(updateDoc(exRef(d.id), { paid: !x.paid })); if (x.fromResv && S.resvs.some(r => r.id === x.resvId)) fire(updateDoc(rvRef(x.resvId), { paid: !x.paid })); },
   addExp() { expForm(null); },
-  editExp(d) { expForm(d.id); },
+  editExp(d) { const x = S.expenses.find(e => e.id === d.id); if (x && x.fromResv && S.resvs.some(r => r.id === x.resvId)) { resvForm(x.resvId); toast('予約から入った支出は、予約の画面で直します'); } else expForm(d.id); },
   delExp(d) { closeModal(); fire(deleteDoc(exRef(d.id))); toast('削除しました'); },
   editBudget() { budgetForm(); },
   print() { window.print(); },
