@@ -28,14 +28,14 @@ header.top .ver{display:block;font-size:11px;font-weight:400;color:var(--sub)}
 .qadd{display:flex;gap:8px;margin:8px 0}.qadd input{flex:1}
 .item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin:6px 0}
 .item.done{opacity:.55}.item.done .ett{text-decoration:line-through}
-.ck{flex:0 0 38px;height:38px;border-radius:8px;border:2px solid #c7c6c4;background:#fff;font-size:24px;color:#fff;line-height:1;padding:0}
+.ck{flex:0 0 26px;height:26px;border-radius:6px;border:2px solid #c7c6c4;background:#fff;font-size:17px;font-weight:700;color:#fff;line-height:1;padding:0}
 .ck:disabled{opacity:.6}.item.done .ck{background:var(--acc);border-color:var(--acc)}
 .ib{flex:1;min-width:0}
 .sitem{display:flex;gap:10px;align-items:center;border-bottom:1px dashed #000;padding:8px 2px;font-size:20px;font-weight:700;break-inside:avoid;page-break-inside:avoid}
 .sbox2{flex:0 0 28px;height:28px;border:3px solid #000;border-radius:6px}
 .sitem small{font-weight:400;font-size:14px}
 .gsum{display:flex;gap:10px}.gsum>div{flex:1}.gsum b{display:block;font-size:20px}
-.item .ck.gift{font-size:20px}
+.item .ck.gift{font-size:15px}
 .bsum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.bsum b{display:block;font-size:20px}
 .neg{color:var(--ng)!important}
 .pbar{display:flex;height:12px;background:#eee;border-radius:6px;overflow:hidden;margin:8px 0 2px}.pbar i{display:block;height:100%}.pbar .p1{background:var(--acc)}.pbar .p2{background:#a8cdef}.pbar.small{height:8px;margin:4px 0}
@@ -199,7 +199,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v10.1';
+const VERSION = 'v10.2';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -499,7 +499,7 @@ function giftsHTML(par) {
    <div class="card gsum"><div><span class="sub">予定金額の合計</span><b>${yen(total)}</b></div><div><span class="sub">買ったもの</span><b>${bought.length} / ${list.length}件</b><span class="sub">${yen(boughtTotal)}</span></div></div>
    <div class="bar"><div class="seg">${seg}</div></div>
    ${shown.length ? shown.map(g => `<div class="item ${g.bought ? 'done' : ''}"><button class="ck gift" data-a="toggleGift" data-id="${g.id}" aria-label="買った" ${par ? '' : 'disabled'}>${g.bought ? '✓' : ''}</button>
-     <div class="ib"><div class="ett">${esc(g.item || '(品物は未定)')}</div><div class="sub">👤 ${esc(g.to)}${g.price ? '・予定 ' + yen(g.price) : ''}</div>${g.memo ? `<div class="sub">${esc(g.memo)}</div>` : ''}</div>
+     <div class="ib"><div class="ett">👤 ${esc(g.to)}</div><div class="sub">${g.price ? yen(g.price) + '・' : ''}${esc(g.item || '品物は未定')}</div>${g.memo ? `<div class="sub">${esc(g.memo)}</div>` : ''}</div>
      ${par ? `<button class="mini" data-a="editGift" data-id="${g.id}">編集</button>` : ''}</div>`).join('') : `<div class="empty">${list.length ? (f === 'todo' ? 'ぜんぶ買えました 🎉' : 'まだ買ったものはありません') : 'まだお土産がありません'}</div>`}`;
 }
 
@@ -673,8 +673,9 @@ function giftForm(id) {
   const g = id ? S.gifts.find(x => x.id === id) : null;
   const d = g || { to:'', item:'', price:'', memo:'', bought:false };
   openModal(g ? 'お土産を編集' : 'お土産を追加', `<form data-f="gift" data-id="${g ? g.id : ''}">
-   ${inp('to','渡す相手',d.to,'text','required')}${inp('item','品物',d.item)}
-   ${inp('price','予定金額(円)',d.price,'number','min="0" inputmode="numeric"')}
+   ${inp('to','渡す相手',d.to,'text','required')}
+   ${inp('price','金額(円)',d.price,'number','min="0" inputmode="numeric"')}
+   ${inp('item','品物',d.item)}
    ${area('memo','メモ',d.memo)}
    <label class="chk"><input type="checkbox" name="bought" ${d.bought ? 'checked' : ''}>買った</label>
    ${acts('保存する', g ? `<button class="btn ng" type="button" data-a="delGift" data-id="${g.id}">削除</button>` : '')}</form>`);
