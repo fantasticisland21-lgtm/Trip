@@ -200,7 +200,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v13.5';
+const VERSION = 'v13.6';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -475,7 +475,8 @@ function containerOrder() {
   const { roots, kids } = itemTree(); const out = [], seen = new Set();
   const go = b => { if (seen.has(b.id)) return; seen.add(b.id); out.push(b); kids(b.id).filter(x => x.isBag).forEach(go); };
   roots.filter(isCar).forEach(go); roots.filter(r => r.isBag && !isCar(r)).forEach(go);
-  return out;
+  const key = (c, i) => c.secOrder ?? (1e9 + i);
+  return out.map((c, i) => [c, key(c, i)]).sort((a,b) => a[1] - b[1]).map(x => x[0]);
 }
 function itemsHTML(par) {
   const { list, roots, kids, desc } = itemTree();
@@ -487,19 +488,20 @@ function itemsHTML(par) {
     return `<div class="item ${i.isBag ? 'bag' : ''} ${i.done ? 'done' : ''}"><button class="ck" data-a="toggleItem" data-id="${i.id}" aria-label="準備できた" ${par ? '' : 'disabled'}>${i.done ? '✓' : ''}</button>
      <div class="ib"><div class="ett">${bagIcon(i, depth)}${plain(i.name)}${n && n.length ? ` <span class="sub">${n.filter(x => x.done).length}/${n.length}</span>` : ''}</div>${i.memo ? `<div class="sub">${esc(i.memo)}</div>` : ''}</div>
      ${par ? `<div class="acts">${isCar(i) ? '' : `<button class="mini" data-a="moveItem" data-id="${i.id}">移動</button>`}<button class="mini" data-a="editItem" data-id="${i.id}">編集</button></div>` : ''}</div>`; };
-  // 入れ物ごとに「○○に入れるもの」の一覧を作る(準備のときに見やすいように、中身は1段だけ)
+  // 入れ物ごとの一覧を作る(準備のときに見やすいように、中身は1段だけ)
   const sec = (title, head, items, emptyMsg) => { const rows = items.filter(visible).map(x => row(x, 0)).join('');
     if (!rows && todo) return ''; return title + head + (rows || `<div class="sub" style="padding:4px 2px 8px">${emptyMsg}</div>`); };
   let body = '';
   const loose = roots.filter(i => !i.isBag);
-  if (loose.length) body += sec(bags.length ? '<div class="sech"><h3>入れ物に入れないもの</h3></div>' : '', '', loose, '');
+  if (loose.length) body += sec(bags.length ? '<div class="sech"><h3>入れ物なし</h3></div>' : '', '', loose, '');
   containerOrder().forEach(c => { const ch = kids(c.id); const n = ch;
-    body += sec(`<div class="sech"><h3>${bagMark(c)}${plain(c.name)}に入れるもの</h3><span class="sub">${n.filter(x => x.done).length}/${n.length}</span>${par ? `<button class="mini" data-a="editItem" data-id="${c.id}">編集</button>` : ''}</div>`, '', ch, 'まだ何もありません'); });
+    body += sec(`<div class="sech"><h3>${bagMark(c)}${plain(c.name)}</h3><span class="sub">${n.filter(x => x.done).length}/${n.length}</span>${par ? `<button class="mini" data-a="editItem" data-id="${c.id}">編集</button>` : ''}</div>`, '', ch, 'まだ何もありません'); });
   const chips = bags.length && par ? `<div class="sub" style="margin:2px 0 0">入れる先</div><div class="chips" style="margin:0 0 8px">${[['','かばんなし'], ...bags.map(b => [b.id, bagMark(b) + plain(b.name)])].map(([v,l]) => `<label><input type="radio" name="itembag" data-a="itemBag" data-v="${v}" ${S.itemBag === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>` : '';
   const done = list.filter(i => i.done).length;
   return `<div class="bar"><h2>持ち物リスト</h2><div class="sub"><b>${done}</b> / ${list.length} 準備できた</div></div>
    ${par ? `<form data-f="itemquick" class="qadd"><input type="text" name="name" placeholder="持ち物を入力して「追加」" autocomplete="off"><button class="btn" type="submit">追加</button></form>${chips}` : ''}
-   <div class="bar"><div class="seg"><button class="${S.itemFilter === 'all' ? 'on' : ''}" data-a="filterItems" data-v="all">すべて</button><button class="${S.itemFilter === 'todo' ? 'on' : ''}" data-a="filterItems" data-v="todo">まだ</button></div>${par ? '<div style="display:flex;gap:6px"><button class="mini" data-a="addBag">＋入れ物</button><button class="mini" data-a="copyItemsModal">コピー</button></div>' : ''}</div>
+   <div class="bar"><div class="seg"><button class="${S.itemFilter === 'all' ? 'on' : ''}" data-a="filterItems" data-v="all">すべて</button><button class="${S.itemFilter === 'todo' ? 'on' : ''}" data-a="filterItems" data-v="todo">まだ</button></div>${par ? '<button class="mini" data-a="addBag">＋入れ物</button>' : ''}</div>
+   ${par ? `<div style="display:flex;justify-content:flex-end;gap:6px;margin:-2px 0 4px">${bags.length > 1 ? '<button class="mini" data-a="secOrderModal">↕ 並び順</button>' : ''}<button class="mini" data-a="copyItemsModal">コピー</button></div>` : ''}
    ${body || `<div class="empty">${list.length ? 'ぜんぶ準備できました 🎉' : 'まだ持ち物がありません。<br>キャリーバッグ・ポーチ・車は「＋入れ物」から入れると、中身をまとめられます'}</div>`}`;
 }
 
@@ -631,8 +633,8 @@ function shioriHTML(t) {
     const row = it => `<div class="sitem ${it.isBag ? 'sbag' : ''}"><div class="sbox2"></div><div>${bagIcon(it)}${R(it.name)}</div></div>`;
     const head = t => `<div style="font-size:18px;font-weight:700;margin:18px 0 2px">${t}</div>`;
     const loose = roots.filter(i => !i.isBag);
-    pages += `<section class="page"><div class="sday"><span>🎒</span>もちもの</div>` + (loose.length ? (S.items.some(i => i.isBag) ? head('いれものに いれないもの') : '') + loose.map(row).join('') : '')
-      + containerOrder().map(c => head(`${bagMark(c)}${R(c.name)}に いれるもの`) + (kids(c.id).map(row).join('') || '<div class="smeta" style="padding:6px 2px">なし</div>')).join('') + '</section>';
+    pages += `<section class="page"><div class="sday"><span>🎒</span>もちもの</div>` + (loose.length ? (S.items.some(i => i.isBag) ? head('そのほか') : '') + loose.map(row).join('') : '')
+      + containerOrder().map(c => head(`${bagMark(c)}${R(c.name)}`) + (kids(c.id).map(row).join('') || '<div class="smeta" style="padding:6px 2px">なし</div>')).join('') + '</section>';
   }
   days.forEach((d,i) => {
     const list = dayEvents(d);
@@ -789,7 +791,8 @@ function expForm(id) {
 }
 function itemForm(id, asBag) {
   const it = id ? S.items.find(x => x.id === id) : null;
-  const d = it || { name:'', memo:'', isBag: !!asBag, kind: 'bag', bag: asBag ? '' : S.itemBag };
+  const firstCar = S.items.filter(isCar).sort(sortOrd)[0];
+  const d = it || { name:'', memo:'', isBag: !!asBag, kind: 'bag', bag: asBag ? (firstCar ? firstCar.id : '') : S.itemBag };
   const ng = new Set(it ? [it.id, ...itemTree().desc(it.id).map(x => x.id)] : []);
   const bags = S.items.filter(x => x.isBag && !ng.has(x.id)).sort(sortOrd);
   openModal(d.isBag ? (it ? (isCar(d) ? '車を編集' : 'かばんを編集') : 'かばん・車を追加') : (it ? '持ち物を編集' : '持ち物を追加'), `<form data-f="item" data-id="${it ? it.id : ''}" data-bag="${d.isBag ? 1 : ''}">
@@ -851,8 +854,12 @@ const submitters = {
   item(fd, f) {
     const id = f.dataset.id; const isBag = !!f.dataset.bag;
     const kind = isBag ? (val(fd,'kind') || 'bag') : ''; const data = { name: val(fd,'name'), memo: val(fd,'memo'), isBag, kind, bag: kind === 'car' ? '' : val(fd,'bag') };
-    if (id) fire(updateDoc(itRef(id), data)); else { const ref = doc(collection(db,'trips',S.tripId,'items')); fire(setDoc(ref, { ...data, done: false, order: Date.now() })); if (isBag) S.itemBag = ref.id; }
-    closeModal(); toast('保存しました');
+    if (id) { fire(updateDoc(itRef(id), data)); closeModal(); return toast('保存しました'); }
+    const ref = doc(collection(db,'trips',S.tripId,'items')); fire(setDoc(ref, { ...data, done: false, order: Date.now() })); if (isBag) S.itemBag = ref.id;
+    // 車を作ったら、どこにも入っていない🧳のかばんを自動でその車に入れる
+    const loose = kind === 'car' ? itemTree().roots.filter(r => r.isBag && !isCar(r)) : [];
+    if (loose.length) { const b = writeBatch(db); loose.forEach(x => b.update(itRef(x.id), { bag: ref.id })); fire(b.commit()); }
+    closeModal(); toast(loose.length ? `保存しました(かばん${loose.length}個を車に入れました)` : '保存しました');
   },
   gift(fd, f) {
     const id = f.dataset.id; const p = val(fd,'price');
@@ -1006,6 +1013,17 @@ const H = {
     toast(d.to ? bagPath(d.to) + ' に入れました' : 'かばんから出しました');
   },
   itemBag(d) { S.itemBag = d.v; render(); },
+  secOrderModal() {
+    const cs = containerOrder();
+    openModal('見出しの並び順', `<div class="sub">↑↓で、持ち物の画面としおりの見出しの順番を変えます</div><div class="mvlist">${cs.map((c, i) => `<div class="item" style="margin:0"><div class="ib"><div class="ett">${bagMark(c)}${plain(c.name)}</div></div><div class="acts"><button class="mini" data-a="secMove" data-i="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="secMove" data-i="${i}" data-dir="1" ${i === cs.length - 1 ? 'disabled' : ''}>↓</button></div></div>`).join('')}</div>
+     <div class="mact"><button class="btn" type="button" data-a="mclose">閉じる</button></div>`);
+  },
+  secMove(d) {
+    const cs = containerOrder(); const i = Number(d.i), j = i + Number(d.dir); if (j < 0 || j >= cs.length) return;
+    [cs[i], cs[j]] = [cs[j], cs[i]];
+    const b = writeBatch(db); cs.forEach((c, k) => { c.secOrder = (k + 1) * 10; b.update(itRef(c.id), { secOrder: c.secOrder }); }); fire(b.commit());
+    render(); H.secOrderModal();
+  },
   copyItemsModal() {
     const others = S.trips.filter(t => t.id !== S.tripId);
     openModal('他の旅行から持ち物をコピー', others.length ? `<div class="sub">コピー元の旅行をえらんでください(同じ名前の持ち物はコピーしません)</div>` + others.map(t => `<div class="card tcard" data-a="copyItems" data-id="${t.id}"><h2>${esc(t.name)}</h2><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}</div></div>`).join('') : '<p>ほかの旅行がありません</p>');
