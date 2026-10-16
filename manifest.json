@@ -1,6 +1,6 @@
 {
-  "name": "家族旅行ノート",
-  "short_name": "家族旅行",
+  "name": "Trip-App",
+  "short_name": "Trip-App",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
