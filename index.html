@@ -7,29 +7,29 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="家族旅行">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#e8590c">
+<meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
 <title>家族旅行ノート</title>
 <style>
-:root{--bg:#f6f4ef;--card:#fff;--ink:#222;--sub:#6b6b6b;--main:#e8590c;--main2:#fff1e6;--line:#e3ded4;--ok:#2b8a3e;--ng:#c92a2a;--r:14px}
+:root{--bg:#fbfbfa;--card:#fff;--ink:#37352f;--sub:#787774;--main:#37352f;--main2:#f1f1ef;--line:#e9e9e7;--ok:#448361;--ng:#d44c47;--acc:#2383e2;--r:10px}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;overflow-x:hidden;overflow-x:clip;max-width:100%}
 body{margin:0;overflow-x:hidden;overflow-x:clip;max-width:100%;overscroll-behavior-x:none;touch-action:pan-y pinch-zoom;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;padding-bottom:calc(env(safe-area-inset-bottom) + 30px)}
 button,input,select,textarea{font:inherit;color:inherit}
 h1{font-size:20px;margin:0}
 h2{font-size:17px;margin:0}
-a{color:#1c7ed6}
+a{color:var(--acc)}
 .center{text-align:center;padding:60px 20px;color:var(--sub)}
-header.top{position:sticky;top:0;z-index:5;background:var(--main);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:8px}
+header.top{position:sticky;top:0;z-index:5;background:#fff;color:var(--ink);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;gap:8px}
 header.top .ttl{font-weight:700;font-size:18px;flex:1;white-space:nowrap}
-header.top .ver{display:block;font-size:11px;font-weight:400;opacity:.85}
+header.top .ver{display:block;font-size:11px;font-weight:400;color:var(--sub)}
 .qadd{display:flex;gap:8px;margin:8px 0}.qadd input{flex:1}
 .item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin:6px 0}
 .item.done{opacity:.55}.item.done .ett{text-decoration:line-through}
-.ck{flex:0 0 38px;height:38px;border-radius:10px;border:2px solid var(--main);background:#fff;font-size:24px;color:#fff;line-height:1;padding:0}
-.ck:disabled{opacity:.6}.item.done .ck{background:var(--main)}
+.ck{flex:0 0 38px;height:38px;border-radius:8px;border:2px solid #c7c6c4;background:#fff;font-size:24px;color:#fff;line-height:1;padding:0}
+.ck:disabled{opacity:.6}.item.done .ck{background:var(--acc);border-color:var(--acc)}
 .ib{flex:1;min-width:0}
 .sitem{display:flex;gap:10px;align-items:center;border-bottom:1px dashed #000;padding:8px 2px;font-size:20px;font-weight:700;break-inside:avoid;page-break-inside:avoid}
 .sbox2{flex:0 0 28px;height:28px;border:3px solid #000;border-radius:6px}
@@ -38,20 +38,20 @@ header.top .ver{display:block;font-size:11px;font-weight:400;opacity:.85}
 .item .ck.gift{font-size:20px}
 .bsum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.bsum b{display:block;font-size:20px}
 .neg{color:var(--ng)!important}
-.pbar{display:flex;height:12px;background:#eee;border-radius:6px;overflow:hidden;margin:8px 0 2px}.pbar i{display:block;height:100%}.pbar .p1{background:var(--main)}.pbar .p2{background:#ffc078}.pbar.small{height:8px;margin:4px 0}
+.pbar{display:flex;height:12px;background:#eee;border-radius:6px;overflow:hidden;margin:8px 0 2px}.pbar i{display:block;height:100%}.pbar .p1{background:var(--acc)}.pbar .p2{background:#a8cdef}.pbar.small{height:8px;margin:4px 0}
 .legend{font-size:12px;color:var(--sub)}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 3px 0 8px;vertical-align:-1px}
 .crow{padding:8px 0;border-bottom:1px solid var(--line)}.crow:last-child{border-bottom:0}
 .crow .ch{display:flex;justify-content:space-between;gap:8px;font-weight:700}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.chips label{position:relative}.chips input{position:absolute;opacity:0;width:1px;height:1px}
-.chips span{display:inline-block;border:1px solid var(--main);color:var(--main);border-radius:20px;padding:8px 14px;min-height:40px;background:#fff}
-.chips input:checked+span{background:var(--main);color:#fff;font-weight:700}
+.chips span{display:inline-block;border:1px solid var(--line);color:var(--ink);border-radius:20px;padding:8px 14px;min-height:40px;background:#fff}
+.chips input:checked+span{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700}
 .amt{font-weight:700;white-space:nowrap}
 .tk-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
-.tag.ng{background:#ffe3e3;color:#c92a2a}
+.tag.ng{background:#ffe2dd;color:#c4403b}
 .tplist .chk{margin:6px 0}
 .verfoot{text-align:center;color:var(--sub);font-size:12px;margin-top:18px}
 header.top .who{font-size:12px;opacity:.9;max-width:40vw;display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-radius:10px;padding:8px 12px}
+header.top button{background:var(--main2);border:0;color:var(--ink);border-radius:10px;padding:8px 12px}
 #offline{display:none;background:#fff3bf;color:#5f3b00;padding:8px 14px;font-size:14px;text-align:center}
 #offline.show{display:block}
 .wrap{display:grid;grid-template-columns:minmax(0,1fr);max-width:1100px;margin:0 auto}
@@ -68,33 +68,33 @@ header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-rad
 .empty{color:var(--sub);text-align:center;padding:60px 10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin:10px 0}
 .card.tcard{cursor:pointer}
-.card.tcard.cur{border-color:var(--main);box-shadow:0 0 0 2px var(--main2)}
+.card.tcard.cur{border-color:#c7c6c4;background:var(--main2)}
 .sub{color:var(--sub);font-size:14px}
-.btn{background:var(--main);color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:700;min-height:44px}
-.btn.ghost{background:#fff;color:var(--main);border:1px solid var(--main)}
+.btn{background:var(--main);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;min-height:44px}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
 .btn.ng{background:var(--ng)}
 .btn.block{display:block;width:100%}
 .mini{background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 12px;min-height:36px}
 .mini:disabled{opacity:.35}
 .mini.ng{color:var(--ng);border-color:#f3b4b4}
-.tag{display:inline-block;background:var(--main2);color:#a33d05;border-radius:8px;padding:0 8px;font-size:13px;margin-right:4px}
-.tag.warn{background:#fff3bf;color:#5f3b00}
-.tag.ok{background:#d3f9d8;color:#1d6a2c}
-.tag.gray{background:#eee;color:#555}
+.tag{display:inline-block;background:#e7f3f8;color:#28698f;border-radius:4px;padding:0 8px;font-size:13px;margin-right:4px}
+.tag.warn{background:#fbf3db;color:#89632a}
+.tag.ok{background:#dbeddb;color:#2b593f}
+.tag.gray{background:#f1f1ef;color:#5f5e5b}
 .dhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .back{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;white-space:nowrap}
 .tabs{touch-action:pan-x pan-y;display:flex;gap:6px;overflow-x:auto;margin:8px -14px;padding:0 14px 6px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
-.tabs button{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;padding:8px 16px;min-height:40px}
-.tabs button.on{background:var(--main);border-color:var(--main);color:#fff;font-weight:700}
-.note{background:#e7f5ff;color:#1864ab;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
+.tabs button{flex:0 0 auto;background:#fff;border:1px solid var(--line);color:var(--sub);border-radius:8px;padding:8px 16px;min-height:40px}
+.tabs button.on{background:var(--main2);border-color:#c7c6c4;color:var(--ink);font-weight:700}
+.note{background:#e7f3f8;color:#28698f;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
 .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}
-.seg{display:flex;border:1px solid var(--main);border-radius:12px;overflow:hidden}
-.seg button{background:#fff;border:0;padding:8px 12px;color:var(--main);min-height:40px}
-.seg button.on{background:var(--main);color:#fff;font-weight:700}
-.dayh{display:flex;justify-content:space-between;align-items:center;margin:18px 0 6px;padding-bottom:4px;border-bottom:2px solid var(--main)}
-.dayh h2 span{color:var(--main)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{background:#fff;border:0;padding:8px 12px;color:var(--sub);min-height:40px}
+.seg button.on{background:var(--main2);color:var(--ink);font-weight:700}
+.dayh{display:flex;justify-content:space-between;align-items:center;margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.dayh h2 span{color:var(--sub)}
 .ev{display:flex;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin:8px 0}
-.ev.tbd{border-style:dashed;background:#fffdf5}
+.ev.tbd{border-style:dashed;background:#fbfbfa}
 .etime{flex:0 0 72px;display:grid;grid-template-columns:auto auto auto;justify-content:end;align-content:start;align-items:center;font-variant-numeric:tabular-nums;font-size:20px;font-weight:700;line-height:1.3}
 .etime .th{justify-self:end}
 .etime .tc{text-align:center}
@@ -102,7 +102,7 @@ header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-rad
 .ebody{flex:1;min-width:0}
 .ett{font-weight:700;word-break:break-word}
 .memo{background:#f8f9fa;border-radius:8px;padding:4px 8px;margin-top:4px;font-size:14px;white-space:pre-wrap}
-.rain{color:#1864ab;font-size:14px;margin-top:4px}
+.rain{color:#28698f;font-size:14px;margin-top:4px}
 .eact{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .links a{margin-right:12px;font-size:14px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
@@ -114,7 +114,7 @@ header.top button{background:rgba(255,255,255,.2);border:0;color:#fff;border-rad
 .cal button.out{background:transparent;border-color:transparent;color:#bbb}
 .cal button.trip{background:var(--main2)}
 .cal button.sel{border:2px solid var(--main);font-weight:700}
-.cal .cnt{display:block;font-size:11px;color:var(--main)}
+.cal .cnt{display:block;font-size:11px;color:var(--acc)}
 .calnav{display:flex;justify-content:space-between;align-items:center}
 label.f{display:block;margin:10px 0 2px;font-size:14px;color:var(--sub)}
 input[type=text],input[type=email],input[type=password],input[type=url],input[type=date],input[type=time],input[type=number],input[type=datetime-local],select,textarea{width:100%;padding:10px;border:1px solid #cfc9bd;border-radius:10px;background:#fff;font-size:16px;min-height:44px}
@@ -199,7 +199,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v9 準備タスク (2026-10-16 14:25)';
+const VERSION = 'v10 Notion風デザイン (2026-10-16 14:35)';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -540,14 +540,14 @@ function budgetHTML(t, par) {
      <div><span class="sub">払った</span><b>${yen(c.paid)}</b></div>
      <div><span class="sub">これから払う</span><b>${yen(c.plan)}</b></div>
     </div>
-    ${pbar(c.paid, c.plan, c.total)}<div class="legend"><i style="background:var(--main);margin-left:0"></i>払った<i style="background:#ffc078"></i>これから払う</div>
+    ${pbar(c.paid, c.plan, c.total)}<div class="legend"><i style="background:var(--acc);margin-left:0"></i>払った<i style="background:#a8cdef"></i>これから払う</div>
     ${left != null && left < 0 ? '<div class="sub neg" style="margin-top:4px">予算をこえています</div>' : ''}
     ${par ? `<div class="eact"><button class="mini" data-a="editBudget">${c.total == null ? '予算を決める' : '予算を変える'}</button></div>` : ''}</div>
    <div class="card"><h2>種類ごと</h2>${c.cats.map(crow).join('')}</div>
    <div class="sub">お土産はお土産リストの金額を使います(買った=払った、まだ=これから)。お土産をここに入れる必要はありません。</div>
    <div class="bar"><div class="seg">${seg}</div></div>
    ${shown.length ? shown.map(x => { const rv = S.resvs.find(r => r.id === x.resvId);
-    return `<div class="item ${x.paid ? '' : ''}"><button class="ck" data-a="toggleExp" data-id="${x.id}" aria-label="払った" ${par ? '' : 'disabled'} style="${x.paid ? 'background:var(--main)' : ''}">${x.paid ? '✓' : ''}</button>
+    return `<div class="item ${x.paid ? '' : ''}"><button class="ck" data-a="toggleExp" data-id="${x.id}" aria-label="払った" ${par ? '' : 'disabled'} style="${x.paid ? 'background:var(--acc);border-color:var(--acc)' : ''}">${x.paid ? '✓' : ''}</button>
      <div class="ib"><div class="ett">${esc(x.title)} <span class="tag ${x.paid ? 'ok' : 'warn'}">${x.paid ? '払った' : 'これから'}</span></div>
       <div class="sub">${ECATL[x.cat] && x.cat !== 'gift' ? ECATL[x.cat] : ECATL.other}・${x.date ? fmtD(x.date) : '旅行前・日付なし'}${x.payer ? '・👤 ' + esc(x.payer) : ''}</div>
       ${rv ? `<div class="sub">🎫 ${esc(rv.target)}</div>` : ''}${x.memo ? `<div class="sub">${esc(x.memo)}</div>` : ''}</div>
