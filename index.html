@@ -119,7 +119,7 @@ textarea{min-height:70px}
 input[type=date],input[type=time],input[type=datetime-local]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%}
 input,select,textarea{max-width:100%}
 .chk{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:16px}
-.chk input{width:22px;height:22px}
+.chk input{flex:0 0 22px;width:22px;height:22px}
 .mback{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .msheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overflow-x:hidden;border-radius:18px 18px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 20px)}
 @media(min-width:700px){.mback{align-items:center}.msheet{border-radius:18px}}
@@ -194,7 +194,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v12';
+const VERSION = 'v12.1';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -226,7 +226,7 @@ const S = {
   tab:'schedule', view:'timeline',
   events:[], cands:[], resvs:[], items:[], itemFilter:'all', gifts:[], giftFilter:'all', expenses:[], expFilter:'all', tasks:[], taskFilter:'todo', taskWho:'',
   unTrips:[], unSub:[],
-  sh:{ items:true, ruby:true, place:true, map:false, url:false, rain:false, memo:false, resv:false, resvNo:false, notice:true, people:true }
+  sh:{ items:true, ruby:true, place:true, map:false, url:false, rain:false, memo:false, resv:false, resvNo:false, notice:true, people:true, gifts:true, giftPrice:false }
 };
 const curTrip = () => S.trips.find(t => t.id === S.tripId);
 const isParent = t => !!t && (t.parents || []).includes(S.email);
@@ -598,12 +598,15 @@ function shioriHTML(t) {
       return `<div class="sc"><div class="snum">${k + 1}</div><div class="stime">${time}</div><div class="sbody">${R(e.kidTitle || e.title)}${e.kidNote ? `<div class="snote">${R(e.kidNote)}</div>` : ''}${place}${map}${url}${rain}${memo}</div></div>`;
     }).join('') : '<div class="sempty">この日の予定は まだありません</div>') + '</section>';
   });
+  if (o.gifts && S.gifts.length) {
+    pages += `<section class="page"><div class="sday"><span>🎁</span>おみやげ</div>` + S.gifts.slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0)).map(g => `<div class="sitem"><div class="sbox2"></div><div>${R(g.to)}${g.item || (o.giftPrice && g.price) ? `<small style="display:block">${[g.item ? R(g.item) : '', o.giftPrice && g.price ? yen(g.price) : ''].filter(Boolean).join(' ・ ')}</small>` : ''}</div></div>`).join('') + '</section>';
+  }
   if (o.resv && S.resvs.length) {
     pages += `<section class="page"><div class="sday"><span>🎫</span>よやくのメモ</div>` + S.resvs.slice().sort((a,b) => String(a.useAt||'').localeCompare(String(b.useAt||''))).map(r => `<div class="sc"><div class="sbody">${esc(r.target)}<div class="smeta">${r.vendor ? esc(r.vendor) + ' ' : ''}${r.useAt ? esc(String(r.useAt).replace('T',' ')) : ''}${o.resvNo && r.number ? '<br>よやく番号: ' + esc(r.number) : ''}</div></div></div>`).join('') + '</section>';
   }
   return `<div class="noprint"><div class="card"><h2>しおりに のせるもの</h2>
     <div class="sub">登録した予定をもとに、子ども向けのしおりを作ります。予算や予約番号などは、初期設定ではのりません。</div>
-    <div class="opts">${opt('items','持ち物リスト')}${opt('ruby','ふりがな')}${opt('people','参加者')}${opt('notice','連絡事項')}${opt('place','場所・住所')}${opt('map','地図リンク')}${opt('url','公式サイト')}${opt('rain','雨の日の予定')}${opt('memo','メモ(大人向け)')}${opt('resv','予約のメモ')}${opt('resvNo','予約番号も入れる')}</div>
+    <div class="opts">${opt('items','持ち物リスト')}${opt('gifts','お土産リスト')}${opt('giftPrice','お土産の金額')}${opt('ruby','ふりがな')}${opt('people','参加者')}${opt('notice','連絡事項')}${opt('place','場所・住所')}${opt('map','地図リンク')}${opt('url','公式サイト')}${opt('rain','雨の日の予定')}${opt('memo','メモ(大人向け)')}${opt('resv','予約のメモ')}${opt('resvNo','予約番号')}</div>
     <div class="sub" style="margin-top:6px">ふりがなは、予定名などを「東京{とうきょう}」のように書いておくと付きます。予定の入力画面の「しおり用の名前」でやさしい言葉にも直せます。</div>
     <div class="mact"><button class="btn" data-a="print">印刷・PDFにする</button></div>
     <div class="sub" style="margin-top:6px">押したあと、画面下の共有ボタン(□に↑)の「プリント」→ 画面をピンチアウトすると、PDFとして保存・共有できます。</div></div>
