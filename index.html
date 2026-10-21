@@ -97,9 +97,17 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .dhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}.dhead>div{min-width:0;flex:1}
 .tname{display:flex;align-items:center;gap:6px}.tname h1{word-break:break-word}.tname .mini{flex:0 0 auto;min-height:30px;padding:2px 10px;font-size:13px}
 .back{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;white-space:nowrap}
-.tabs{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin:8px -14px;padding:6px 14px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
+.tabs{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;margin:8px -14px;padding:6px 14px;position:sticky;top:calc(env(safe-area-inset-top) + 52px);background:var(--bg);z-index:4}
 .tabs button{grid-column:span 2;background:#fff;border:1px solid var(--line);color:var(--sub);border-radius:8px;padding:6px 2px;min-height:40px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:clip}
 .tabs button.on{background:var(--main2);border-color:#c7c6c4;color:var(--ink);font-weight:700}
+/* ---- パーク(v15) ---- */
+.pk-cq{container-type:inline-size}
+.pk-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:0 32px}
+.pk-sec.hide{display:none}
+.pk-seg{margin:8px 0}
+.item.ride .ett{word-break:break-word}
+.pri{display:inline-block;border-radius:4px;padding:0 6px;font-size:12px;margin-left:4px;vertical-align:1px}
+@container (min-width:600px){.pk-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.pk-sec.hide{display:block}.seg.pk-seg{display:none}}
 .note{background:#e7f3f8;color:#28698f;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
 .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
@@ -205,7 +213,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v14.4';
+const VERSION = 'v15';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -235,7 +243,7 @@ const S = {
   ready:false, user:null, email:'', authMode:'login', authErr:'',
   trips:[], tripMap:{parents:[], viewers:[]}, tripId:null,
   tab:'schedule', view:'timeline',
-  events:[], cands:[], resvs:[], items:[], itemFilter:'all', itemBag:'', gifts:[], giftFilter:'all', expenses:[], expFilter:'all', tasks:[], taskFilter:'todo', taskWho:'', notes:[],
+  events:[], cands:[], resvs:[], items:[], itemFilter:'all', itemBag:'', gifts:[], giftFilter:'all', expenses:[], expFilter:'all', tasks:[], taskFilter:'todo', taskWho:'', notes:[], park:[], parkView:'ride', parkPri:'must', rideFilter:'all', parkDate:'',
   unTrips:[], unSub:[],
   sh:{ items:true, ruby:true, place:true, map:false, url:false, rain:false, memo:false, resv:false, resvNo:false, notice:true, people:true, gifts:true, giftPrice:false }
 };
@@ -250,6 +258,8 @@ const gfRef = id => doc(db,'trips',S.tripId,'souvenirs',id);
 const exRef = id => doc(db,'trips',S.tripId,'expenses',id);
 const tkRef = id => doc(db,'trips',S.tripId,'tasks',id);
 const ntRef = id => doc(db,'trips',S.tripId,'notes',id);
+const pkRef = id => doc(db,'trips',S.tripId,'park',id);
+const pkCol = () => collection(db,'trips',S.tripId,'park');
 const yen = n => '¥' + (Number(n) || 0).toLocaleString('ja-JP');
 
 /* ふりがな: 「漢字{かんじ}」と書くと、しおりでふりがなが付く */
@@ -292,7 +302,7 @@ function subscribeTrips() {
   }
 }
 function openTrip(id) {
-  unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.items = []; S.gifts = []; S.expenses = []; S.tasks = []; S.notes = []; S.taskWho = '';
+  unsubTrip(); S.tripId = id; S.tab = 'schedule'; S.events = []; S.cands = []; S.resvs = []; S.items = []; S.gifts = []; S.expenses = []; S.tasks = []; S.notes = []; S.park = []; S.taskWho = '';
   const listen = (k, name, tries) => onSnapshot(collection(db,'trips',id,name), snap => {
     S[k] = snap.docs.map(d => ({ id:d.id, ...d.data() })); render();
   }, err => {
@@ -300,7 +310,7 @@ function openTrip(id) {
     if (tries < 3 && S.tripId === id) setTimeout(() => { if (S.tripId === id) S.unSub.push(listen(k, name, tries + 1)); }, 1500 * (tries + 1));
     else toast('読みこめません(' + err.code + ')', true);
   });
-  for (const [k,name] of [['events','events'],['cands','candidates'],['resvs','reservations'],['items','items'],['gifts','souvenirs'],['expenses','expenses'],['tasks','tasks'],['notes','notes']]) S.unSub.push(listen(k, name, 0));
+  for (const [k,name] of [['events','events'],['cands','candidates'],['resvs','reservations'],['items','items'],['gifts','souvenirs'],['expenses','expenses'],['tasks','tasks'],['notes','notes'],['park','park']]) S.unSub.push(listen(k, name, 0));
   render(); window.scrollTo(0,0);
 }
 function closeTrip() { unsubTrip(); S.tripId = null; render(); window.scrollTo(0,0); }
@@ -375,11 +385,11 @@ function listHTML() {
 
 function detailHTML(t) {
   const par = isParent(t);
-  const tabs = [['schedule','予定'],['cands','行き先'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['notes','メモ'],['shiori','しおり'],['settings','設定']];
+  const tabs = [['schedule','予定'],['park','パーク'],['cands','行き先'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['notes','メモ'],['shiori','しおり'],['settings','設定']];
   if (S.tab === 'budget' && !par) S.tab = 'schedule';
-  const body = S.tab === 'schedule' ? scheduleHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'items' ? itemsHTML(par) : S.tab === 'tasks' ? tasksHTML(t,par) : S.tab === 'gifts' ? giftsHTML(par) : S.tab === 'budget' ? budgetHTML(t,par) : S.tab === 'notes' ? notesHTML(par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
+  const body = S.tab === 'schedule' ? scheduleHTML(t,par) : S.tab === 'park' ? parkHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'items' ? itemsHTML(par) : S.tab === 'tasks' ? tasksHTML(t,par) : S.tab === 'gifts' ? giftsHTML(par) : S.tab === 'budget' ? budgetHTML(t,par) : S.tab === 'notes' ? notesHTML(par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
   return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><div class="tname"><h1>${plain(t.name)}</h1>${par ? '<button class="mini" data-a="renameTrip">✏️ 名前</button>' : ''}</div><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div></div></div>
-  <nav class="tabs">${tabs.map(([k,l],i) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}"${i === 5 ? ` style="grid-column:${11 - tabs.length} / span 2"` : ''}>${l}</button>`).join('')}</nav>
+  <nav class="tabs">${tabs.map(([k,l],i) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}"${i === 6 ? ` style="grid-column:${13 - tabs.length} / span 2"` : ''}>${l}</button>`).join('')}</nav>
   ${par ? '' : '<div class="note">この旅行は「見るだけ」です(変更は保護者のアカウントでできます)</div>'}
   ${body}`;
 }
@@ -412,15 +422,85 @@ function evHTML(e, i, n, par) {
   const links = [aLink(safeUrl(e.url), '公式サイト'), aLink(mapLink(e), '地図')].join('');
   return `<div class="ev ${e.confirmed === false ? 'tbd' : ''}">
    ${etimeHTML(e.start, e.end)}
-   <div class="ebody"><div class="ett">${plain(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}</div>
+   <div class="ebody"><div class="ett">${plain(e.title)}${e.confirmed === false ? ' <span class="tag warn">未確定</span>' : ''}${rv ? ' <span class="tag ok">予約あり</span>' : ''}${e.fromPark ? ' <span class="tag gray">パーク</span>' : ''}</div>
    ${e.place ? `<div class="sub">🗺️ ${plain(e.place)}${e.address ? '(' + esc(e.address) + ')' : ''}</div>` : (e.address ? `<div class="sub">🗺️ ${esc(e.address)}</div>` : '')}
    ${rv ? `<div class="sub">🎫 ${esc(rv.target)}</div>` : ''}
    ${links ? `<div class="links">${links}</div>` : ''}
    ${e.memo ? `<div class="memo">${esc(e.memo)}</div>` : ''}
    ${e.rainPlan ? `<div class="rain">☔ 雨の日: ${plain(e.rainPlan)}</div>` : ''}
-   ${par ? `<div class="eact"><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="1" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="mini" data-a="editEv" data-id="${e.id}">編集</button><button class="mini" data-a="dupEv" data-id="${e.id}">複製</button></div>` : ''}
+   ${par ? `<div class="eact"><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="moveEv" data-id="${e.id}" data-dir="1" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="mini" data-a="editEv" data-id="${e.id}">編集</button>${e.fromPark ? '' : `<button class="mini" data-a="dupEv" data-id="${e.id}">複製</button>`}</div>` : ''}
    </div></div>`;
 }
+/* ---- パーク(USJなどの中): アトラクションのチェックリストと、時間のあるイベント ---- */
+// park コレクション: kind='ride'(アトラクション: name, pri='must'|'want', memo, done, order)/ kind='show'(イベント: name, date, start, end, place, memo)
+// イベントは予定(events/park_{ID}, fromPark: true)にも自動で入れる
+const PRI = [['must','絶対'],['want','できれば']];
+const priL = k => (PRI.find(x => x[0] === k) || PRI[1])[1];
+const rideList = () => S.park.filter(x => x.kind !== 'show');
+const showList = () => S.park.filter(x => x.kind === 'show').sort((a,b) => String(a.date || '').localeCompare(String(b.date || '')) || (a.start ? 0 : 1) - (b.start ? 0 : 1) || String(a.start || '').localeCompare(String(b.start || '')));
+const priRides = pri => rideList().filter(x => (x.pri === 'must' ? 'must' : 'want') === pri).sort(sortOrd);
+const pevId = pid => 'park_' + pid;
+function syncParkEvent(pid, s) {
+  const id = pevId(pid); const old = S.events.find(x => x.id === id);
+  const keep = k => old ? old[k] || '' : '';
+  const data = { date: s.date, start: s.start, end: s.end, title: s.name, confirmed: !!s.start, place: s.place, address: keep('address'), url: keep('url'), mapUrl: keep('mapUrl'), resvId: keep('resvId'), memo: s.memo, rainPlan: keep('rainPlan'), kidTitle: keep('kidTitle'), kidNote: keep('kidNote'), fromPark: true, parkId: pid };
+  data.order = (old && old.date === s.date && (old.start || '') === s.start && old.order != null) ? old.order : placeOrder(s.date, s.start, id);
+  fire(setDoc(evRef(id), data));
+}
+function parkHTML(t, par) {
+  const rides = rideList(), shows = showList(); const pv = S.parkView;
+  const f = S.rideFilter; const keep = x => f === 'todo' ? !x.done : f === 'done' ? !!x.done : true;
+  const done = rides.filter(x => x.done).length;
+  const rideRow = (x, i, n) => `<div class="item ride ${x.done ? 'done' : ''}"><button class="ck" data-a="toggleRide" data-id="${x.id}" aria-label="乗った" ${par ? '' : 'disabled'}>${x.done ? '✓' : ''}</button>
+    <div class="ib"><div class="ett">${plain(x.name)}</div>${x.memo ? `<div class="sub">${esc(x.memo)}</div>` : ''}</div>
+    ${par ? `<div class="acts"><button class="mini" data-a="moveRide" data-id="${x.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="moveRide" data-id="${x.id}" data-dir="1" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="mini" data-a="editRide" data-id="${x.id}">編集</button></div>` : ''}</div>`;
+  const groups = PRI.map(([k,l]) => { const all = priRides(k); if (!all.length) return '';
+    const shown = all.filter(keep); const cnt = `<span class="sub">${all.filter(x => x.done).length}/${all.length}</span>`;
+    return `<div class="sech"><h3>${k === 'must' ? '★ ' : ''}${l}</h3>${cnt}</div>` + (shown.length ? shown.map(x => rideRow(x, all.indexOf(x), all.length)).join('') : `<div class="sub" style="padding:4px 2px 8px">${f === 'todo' ? 'ぜんぶ乗れました 🎉' : 'この中にはありません'}</div>`); }).join('');
+  const chips = `<div class="chips" style="margin:0 0 8px">${PRI.map(([k,l]) => `<label><input type="radio" name="ridepri" data-a="ridePri" data-v="${k}" ${S.parkPri === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
+  const rideSec = `<section class="pk-sec ${pv === 'ride' ? '' : 'hide'}">
+    <div class="bar"><h2>🎢 アトラクション</h2><div class="sub"><b>${done}</b> / ${rides.length} 乗った</div></div>
+    ${par ? `<form data-f="ridequick" class="qadd"><input type="text" name="name" placeholder="乗りたい・行きたい所を入れて「追加」" autocomplete="off"><button class="btn" type="submit">追加</button></form>${chips}` : ''}
+    ${rides.length ? `<div class="bar"><div class="seg">${[['all','すべて'],['todo','まだ'],['done','乗った']].map(([k,l]) => `<button class="${f === k ? 'on' : ''}" data-a="filterRides" data-v="${k}">${l}</button>`).join('')}</div></div>${groups}` : '<div class="empty">まだありません。<br>乗りたいアトラクションや、行きたいお店・エリアを入れましょう</div>'}
+   </section>`;
+  const dates = [...new Set(shows.map(x => x.date))];
+  const showCard = x => `<div class="ev ${x.start ? '' : 'tbd'}">${etimeHTML(x.start, x.end)}
+    <div class="ebody"><div class="ett">${plain(x.name)}${x.start ? '' : ' <span class="tag warn">時間未定</span>'}</div>
+    ${x.place ? `<div class="sub">🗺️ ${plain(x.place)}</div>` : ''}${x.memo ? `<div class="memo">${esc(x.memo)}</div>` : ''}
+    ${par ? `<div class="eact"><button class="mini" data-a="editShow" data-id="${x.id}">編集</button></div>` : ''}</div></div>`;
+  const showSec = `<section class="pk-sec ${pv === 'show' ? '' : 'hide'}">
+    <div class="bar"><h2>🎪 イベント・ショー</h2>${par ? '<button class="btn" data-a="addShow">＋イベント</button>' : ''}</div>
+    <div class="sub">パレードやショーなど、時間が決まっているもの。予定タブとしおりにも自動で出ます</div>
+    ${shows.length ? dates.map(d => (dates.length > 1 ? `<div class="sech"><h3>${d ? fmtD(d) : '日にち未定'}</h3></div>` : `<div class="sub" style="margin-top:8px">${d ? fmtD(d) : ''}</div>`) + shows.filter(x => x.date === d).map(showCard).join('')).join('') : '<div class="empty">まだありません</div>'}
+   </section>`;
+  return `<div class="pk-cq"><div class="seg pk-seg">${[['ride',`アトラクション ${rides.length ? done + '/' + rides.length : ''}`],['show',`イベント ${shows.length || ''}`]].map(([k,l]) => `<button class="${pv === k ? 'on' : ''}" data-a="parkView" data-v="${k}" style="flex:1">${l}</button>`).join('')}</div>
+   <div class="pk-cols">${rideSec}${showSec}</div></div>`;
+}
+function rideForm(id) {
+  const x = id ? S.park.find(e => e.id === id) : null;
+  const d = x || { name:'', pri: S.parkPri, memo:'', done:false };
+  openModal(x ? 'アトラクションを編集' : 'アトラクションを追加', `<form data-f="ride" data-id="${x ? x.id : ''}">
+   ${inp('name','アトラクション・行きたい所',d.name,'text','required')}
+   <label class="f">優先度</label><div class="chips">${PRI.map(([k,l]) => `<label><input type="radio" name="pri" value="${k}" ${(d.pri === 'must' ? 'must' : 'want') === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+   ${area('memo','メモ(身長制限、エクスプレス、だれが乗りたい など)',d.memo)}
+   <label class="chk"><input type="checkbox" name="done" ${d.done ? 'checked' : ''}>乗った・行った</label>
+   ${acts('保存する', x ? `<button class="btn ng" type="button" data-a="delRide" data-id="${x.id}">削除</button>` : '')}</form>`);
+}
+function showForm(id) {
+  const t = curTrip(); const x = id ? S.park.find(e => e.id === id) : null;
+  const last = showList().slice(-1)[0];
+  const def = S.parkDate || (last && last.date) || t.start;
+  const d = x || { name:'', date: def, start:'', end:'', place:'', memo:'' };
+  openModal(x ? 'イベントを編集' : 'イベントを追加', `<form data-f="show" data-id="${x ? x.id : ''}">
+   ${inp('name','イベント名',d.name,'text','required placeholder="例: パレード、ショー"')}
+   <label class="f">日付</label><select name="date">${dayOptions(t, d.date)}</select>
+   <div class="row2"><div>${inp('start','開始時刻',d.start,'time')}</div><div>${inp('end','終了時刻',d.end,'time')}</div></div>
+   ${inp('place','場所(見る場所・集合場所など)',d.place)}
+   ${area('memo','メモ',d.memo)}
+   <div class="sub" style="margin-top:4px">予定タブとしおりにも自動で入ります(時刻が空なら「未確定」)</div>
+   ${acts('保存する', x ? `<button class="btn ng" type="button" data-a="delShow" data-id="${x.id}">削除</button>` : '')}</form>`);
+}
+
 /* ---- 行き先候補 ---- */
 const CST = { consider:'検討中', adopt:'採用', skip:'見送り' };
 function candsHTML(par) {
@@ -902,6 +982,23 @@ const submitters = {
     if (id) fire(updateDoc(exRef(id), data)); else fire(setDoc(doc(collection(db,'trips',S.tripId,'expenses')), { ...data, order: Date.now() }));
     closeModal(); toast('保存しました');
   },
+  ridequick(fd, f) {
+    const name = val(fd,'name'); if (!name) return;
+    fire(setDoc(doc(pkCol()), { kind: 'ride', name, pri: S.parkPri, memo: '', done: false, order: Date.now() })); f.reset();
+  },
+  ride(fd, f) {
+    const id = f.dataset.id; const data = { kind: 'ride', name: val(fd,'name'), pri: val(fd,'pri') === 'want' ? 'want' : 'must', memo: val(fd,'memo'), done: fd.get('done') === 'on' };
+    const old = id ? S.park.find(x => x.id === id) : null;
+    if (id) fire(updateDoc(pkRef(id), old && old.pri !== data.pri ? { ...data, order: Date.now() } : data)); else fire(setDoc(doc(pkCol()), { ...data, order: Date.now() }));
+    closeModal(); toast('保存しました');
+  },
+  show(fd, f) {
+    const id = f.dataset.id; const data = { kind: 'show', name: val(fd,'name'), date: val(fd,'date'), start: val(fd,'start'), end: val(fd,'end'), place: val(fd,'place'), memo: val(fd,'memo') };
+    const ref = id ? pkRef(id) : doc(pkCol());
+    if (id) fire(updateDoc(ref, data)); else fire(setDoc(ref, data));
+    syncParkEvent(ref.id, data); S.parkDate = data.date;
+    closeModal(); toast('保存しました(予定にも入れました)');
+  },
   notequick(fd, f) {
     const text = String(fd.get('text') || '').trim(); if (!text) return;
     fire(setDoc(doc(collection(db,'trips',S.tripId,'notes')), { text, by: S.email, createdAt: Date.now(), pinned: false })); f.reset(); toast('書きこみました');
@@ -952,11 +1049,17 @@ async function duplicateTrip(srcId, name, newStart) {
     const nref = doc(collection(db,'trips')); const b = writeBatch(db);
     const parents = [...new Set([...(src.parents || []), S.email])];
     b.set(nref, { name, dest: src.dest || '', start: newStart, end: addDays(newStart, dur), people: src.people || '', notice: src.notice || '', memo: src.memo || '', ...(src.budget ? { budget: src.budget } : {}), ...(src.departs ? { departs: Object.fromEntries(Object.entries(src.departs).map(([k,v]) => [addDays(k, off), v])) } : {}), parents, viewers: src.viewers || [], createdBy: S.email, createdAt: serverTimestamp() });
-    const [es, cs, its, tks] = await Promise.all([getDocs(collection(db,'trips',srcId,'events')), getDocs(collection(db,'trips',srcId,'candidates')), getDocs(collection(db,'trips',srcId,'items')), getDocs(collection(db,'trips',srcId,'tasks'))]);
+    const [es, cs, its, tks, pks] = await Promise.all([getDocs(collection(db,'trips',srcId,'events')), getDocs(collection(db,'trips',srcId,'candidates')), getDocs(collection(db,'trips',srcId,'items')), getDocs(collection(db,'trips',srcId,'tasks')), getDocs(collection(db,'trips',srcId,'park'))]);
+    // パーク: アトラクションは「まだ」に戻す。イベントは日付をずらし、予定の側も新しいIDでつなぎ直す
+    const evById = new Map(es.docs.map(d => [d.id, d.data()]));
+    pks.docs.forEach(d => { const x = d.data(); const nid = doc(collection(db,'trips',nref.id,'park')).id;
+      if (x.kind === 'show') { const date = x.date ? addDays(x.date, off) : ''; b.set(doc(db,'trips',nref.id,'park',nid), { ...x, date });
+        const oe = evById.get(pevId(d.id)); if (oe) b.set(doc(db,'trips',nref.id,'events',pevId(nid)), { ...oe, date: addDays(oe.date, off), resvId: '', parkId: nid }); }
+      else b.set(doc(db,'trips',nref.id,'park',nid), { ...x, done: false }); });
     tks.docs.forEach(d => { const x = d.data(); b.set(doc(collection(db,'trips',nref.id,'tasks')), { ...x, done: false, due: x.due ? addDays(x.due, off) : '' }); });
     const imap = {}; its.docs.forEach(d => { imap[d.id] = doc(collection(db,'trips',nref.id,'items')).id; });
     its.docs.forEach(d => { const x = d.data(); b.set(doc(db,'trips',nref.id,'items',imap[d.id]), { ...x, done: false, bag: x.bag ? (imap[x.bag] || '') : '' }); });
-    es.docs.forEach(d => { const x = d.data(); b.set(doc(collection(db,'trips',nref.id,'events')), { ...x, date: addDays(x.date, off), resvId: '' }); });
+    es.docs.forEach(d => { const x = d.data(); if (x.fromPark) return; b.set(doc(collection(db,'trips',nref.id,'events')), { ...x, date: addDays(x.date, off), resvId: '' }); });
     cs.docs.forEach(d => { const x = d.data(); b.set(doc(collection(db,'trips',nref.id,'candidates')), { ...x, date: x.date ? addDays(x.date, off) : '', status: 'consider' }); });
     await b.commit(); toast('複製しました'); openTrip(nref.id);
   } catch (e) { toast('複製できませんでした(' + (e.code || e.message) + ')', true); }
@@ -964,7 +1067,7 @@ async function duplicateTrip(srcId, name, newStart) {
 async function deleteTrip(id) {
   try {
     toast('削除しています…');
-    for (const n of ['events','candidates','reservations','items','souvenirs','expenses','tasks','notes']) {
+    for (const n of ['events','candidates','reservations','items','souvenirs','expenses','tasks','notes','park']) {
       const snap = await getDocs(collection(db,'trips',id,n)); const b = writeBatch(db); snap.docs.forEach(d => b.delete(d.ref)); await b.commit();
     }
     await deleteDoc(doc(db,'trips',id));
@@ -973,7 +1076,7 @@ async function deleteTrip(id) {
 }
 function exportJson() {
   const t = curTrip(); const strip = o => { const { id, ...r } = o; return { id, ...r }; };
-  const data = { exportedAt: new Date().toISOString(), trip: strip({ ...t, createdAt: undefined }), events: S.events, candidates: S.cands, reservations: S.resvs, items: S.items, souvenirs: S.gifts, expenses: S.expenses, tasks: S.tasks, notes: S.notes };
+  const data = { exportedAt: new Date().toISOString(), trip: strip({ ...t, createdAt: undefined }), events: S.events, candidates: S.cands, reservations: S.resvs, items: S.items, souvenirs: S.gifts, expenses: S.expenses, tasks: S.tasks, notes: S.notes, park: S.park };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `trip-${t.name}.json`; document.body.appendChild(a); a.click(); a.remove();
 }
@@ -996,7 +1099,7 @@ const H = {
   renameTrip() { const t = curTrip(); openModal('旅行の名前を変える', `<form data-f="rename">${inp('name','旅行の名前',t.name,'text','required')}${acts('保存する')}</form>`); setTimeout(() => { const i = document.querySelector('#modal input[name=name]'); if (i) { i.focus(); i.select(); } }, 50); },
   dupTrip(d) {
     const t = S.trips.find(x => x.id === d.id);
-    openModal('旅行を複製', `<form data-f="dup" data-id="${t.id}"><div class="sub">予定・行き先候補・持ち物・準備・予算の金額をコピーします(予約・お土産・支出はコピーしません。持ち物と準備は「まだ」に戻ります)。日付は新しい出発日に合わせてずらします。</div>
+    openModal('旅行を複製', `<form data-f="dup" data-id="${t.id}"><div class="sub">予定・パーク・行き先候補・持ち物・準備・予算の金額をコピーします(予約・お土産・支出はコピーしません。持ち物・準備・アトラクションは「まだ」に戻ります)。日付は新しい出発日に合わせてずらします。</div>
      ${inp('name','新しい旅行名', t.name + '(コピー)','text','required')}${inp('start','新しい出発日','', 'date','required')}${acts('複製する')}</form>`);
   },
   delTrip(d) { const t = S.trips.find(x => x.id === d.id); confirmModal('旅行を削除', `「${t.name}」を削除します。予定・予約などもすべて消えて、元にもどせません。`, 'doDelTrip', d.id); },
@@ -1004,7 +1107,7 @@ const H = {
   tab(d) { S.tab = d.t; render(); window.scrollTo(0,0); },
   view(d) { S.view = d.v; render(); },
   addEv(d) { evForm(null, d.d); },
-  editEv(d) { evForm(d.id); },
+  editEv(d) { const e = S.events.find(x => x.id === d.id); if (e && e.fromPark && S.park.some(x => x.id === e.parkId)) { showForm(e.parkId); toast('パークのイベントは、パークの画面で直します'); } else evForm(d.id); },
   dupEv(d) {
     const e = S.events.find(x => x.id === d.id); const list = dayEvents(e.date); const i = list.findIndex(x => x.id === d.id); const next = list[i + 1];
     const { id, ...rest } = e; const order = next ? ((e.order ?? 0) + (next.order ?? 0)) / 2 : (e.order ?? 0) + 1000;
@@ -1072,6 +1175,23 @@ const H = {
       await b.commit(); toast(n + '個コピーしました');
     } catch (e) { toast('コピーできませんでした(' + (e.code || e.message) + ')', true); }
   },
+  parkView(d) { S.parkView = d.v; render(); },
+  ridePri(d) { S.parkPri = d.v; },
+  filterRides(d) { S.rideFilter = d.v; render(); },
+  toggleRide(d) { const x = S.park.find(e => e.id === d.id); if (x) fire(updateDoc(pkRef(d.id), { done: !x.done })); },
+  moveRide(d) {
+    const x = S.park.find(e => e.id === d.id); if (!x) return;
+    const list = priRides(x.pri === 'must' ? 'must' : 'want'); const i = list.findIndex(e => e.id === d.id); const j = i + Number(d.dir);
+    if (j < 0 || j >= list.length) return;
+    const a = list[i], b = list[j]; const oa = a.order ?? 0, ob = b.order ?? 0;
+    if (oa === ob) fire(updateDoc(pkRef(a.id), { order: oa + Number(d.dir) * 0.5 }));
+    else { fire(updateDoc(pkRef(a.id), { order: ob })); fire(updateDoc(pkRef(b.id), { order: oa })); }
+  },
+  editRide(d) { rideForm(d.id); },
+  delRide(d) { closeModal(); fire(deleteDoc(pkRef(d.id))); toast('削除しました'); },
+  addShow() { showForm(null); },
+  editShow(d) { showForm(d.id); },
+  delShow(d) { closeModal(); fire(deleteDoc(pkRef(d.id))); if (S.events.some(x => x.id === pevId(d.id))) fire(deleteDoc(evRef(pevId(d.id)))); toast('削除しました(予定からも消しました)'); },
   filterGifts(d) { S.giftFilter = d.v; render(); },
   toggleGift(d) { const g = S.gifts.find(x => x.id === d.id); if (g) fire(updateDoc(gfRef(d.id), { bought: !g.bought })); },
   addGift() { giftForm(null); },
