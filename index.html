@@ -218,7 +218,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v15.2';
+const VERSION = 'v15.3';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -358,8 +358,11 @@ function render() {
   if (!S.ready) { app.innerHTML = '<div class="center">読みこみ中…</div>'; return; }
   if (!S.user) { app.innerHTML = authHTML(); return; }
   const t = curTrip();
+  // 描き直しても、見ていた位置がずれないようにする
+  const y = window.scrollY;
   app.innerHTML = `<header class="top"><div class="ttl"><svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><path d="M404 118L130 234l104 40 42 112z" fill="#fff" stroke="currentColor" stroke-width="30" stroke-linejoin="round"/><path d="M234 274L404 118" stroke="currentColor" stroke-width="30" stroke-linecap="round"/></svg>家族旅行ノート<span class="ver">${VERSION}</span></div><div class="who">${esc(S.email)}</div><button data-a="logout">ログアウト</button></header>
   <div class="wrap ${t ? 'has-trip' : ''}"><aside class="side">${listHTML()}</aside><main class="main">${t ? detailHTML(t) : '<div class="empty">左の一覧から旅行をえらんでください</div>'}</main></div>`;
+  if (window.scrollY !== y) window.scrollTo(0, y);
 }
 
 function authHTML() {
@@ -1182,7 +1185,14 @@ const H = {
       await b.commit(); toast(n + '個コピーしました');
     } catch (e) { toast('コピーできませんでした(' + (e.code || e.message) + ')', true); }
   },
-  parkOpen() { S.parkOpen = !S.parkOpen; render(); },
+  // パークの開け閉めは画面を描き直さず、押した見出しが画面の同じ位置に残るようにする
+  parkOpen(d, b) {
+    S.parkOpen = !S.parkOpen;
+    const card = b.closest('.pk-card'); const top = b.getBoundingClientRect().top;
+    const body = card && card.querySelector('.pk-body'); const arw = b.querySelector('.arw');
+    if (body) body.classList.toggle('hide', !S.parkOpen); if (arw) arw.textContent = S.parkOpen ? '閉じる ▲' : '開く ▼';
+    b.blur(); window.scrollBy(0, b.getBoundingClientRect().top - top);
+  },
   ridePri(d) { S.parkPri = d.v; },
   filterRides(d) { S.rideFilter = d.v; render(); },
   toggleRide(d) { const x = S.park.find(e => e.id === d.id); if (x) fire(updateDoc(pkRef(d.id), { done: !x.done })); },
