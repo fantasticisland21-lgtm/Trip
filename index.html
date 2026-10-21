@@ -102,7 +102,8 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .tabs button.on{background:var(--main2);border-color:#c7c6c4;color:var(--ink);font-weight:700}
 /* ---- パーク(v15) ---- */
 .sch-cq{container-type:inline-size}
-.sch-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:0 32px;align-items:start}
+.pk-groups{display:grid;grid-template-columns:minmax(0,1fr);gap:0 32px;align-items:start}
+.pk-day{display:flex;align-items:center;gap:8px;margin:8px 0}.pk-day select{width:auto;flex:1;min-width:0}
 .pk-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin:8px 0}
 .pk-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:4px 0;text-align:left;min-height:40px}
 .pk-head h2{flex:1;min-width:0}
@@ -111,7 +112,7 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .pk-show{display:flex;gap:10px;align-items:baseline;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 2px;text-align:left;min-height:40px}
 .pk-show b{flex:0 0 48px;font-variant-numeric:tabular-nums}
 .item.ride .ett{word-break:break-word}
-@container (min-width:600px){.sch-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.sch-park{order:2}.pk-body.hide{display:block}.pk-head .arw{display:none}.pk-head{pointer-events:none}}
+@container (min-width:600px){.pk-groups{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.pk-body.hide{display:block}.pk-head .arw{display:none}.pk-head{pointer-events:none}}
 .note{background:#e7f3f8;color:#28698f;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}
 .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
@@ -217,7 +218,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v15.1';
+const VERSION = 'v15.2';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -402,9 +403,10 @@ function detailHTML(t) {
 function scheduleHTML(t, par) {
   const days = allDays(t);
   let h = `<div class="bar"><div class="seg">${[['timeline','時間'],['cards','カード']].map(([v,l]) => `<button class="${S.view === v ? 'on' : ''}" data-a="view" data-v="${v}">${l}</button>`).join('')}</div>${par ? '<button class="btn" data-a="addEv">＋予定</button>' : ''}</div>`;
-  const pk = parkHTML(t, par);
-  const daysH = days.map((d,i) => dayHTML(d, i, par, S.view === 'cards')).join('');
-  return h + (pk ? `<div class="sch-cq"><div class="sch-cols"><div class="sch-park">${pk}</div><div>${daysH}</div></div></div>` : daysH);
+  // パークに行く日が決まっていれば、その日の中にパークの欄を出す。決まっていなければ一番上に出す
+  const pd = parkDayOf(t);
+  const top = pd ? '' : parkHTML(t, par, '');
+  return h + `<div class="sch-cq">${top}${days.map((d,i) => dayHTML(d, i, par, S.view === 'cards', d === pd ? parkHTML(t, par, d) : '')).join('')}</div>`;
 }
 const depOf = date => ((curTrip() || {}).departs || {})[date];
 function depHTML(date, i, par) {
@@ -412,10 +414,10 @@ function depHTML(date, i, par) {
   if (d && d.time) return `<div class="dep">🚪 <b>${esc(tt(d.time))}</b><span>${plain(d.from || (i ? 'ホテル' : '家'))}を出発</span>${par ? `<button class="mini" data-a="editDep" data-d="${date}" data-i="${i}">編集</button>` : ''}</div>`;
   return par ? `<div style="margin:6px 0"><button class="mini" data-a="editDep" data-d="${date}" data-i="${i}">🚪 ＋出発時刻</button></div>` : '';
 }
-function dayHTML(date, i, par, cards) {
+function dayHTML(date, i, par, cards, pk = '') {
   const list = dayEvents(date);
   return `<div class="dayh"><h2><span>${i + 1}日め</span> ${fmtD(date)}</h2><div>${par && list.length > 1 ? `<button class="mini" data-a="sortDay" data-d="${date}">時刻順</button> ` : ''}${par ? `<button class="mini" data-a="addEv" data-d="${date}">＋</button>` : ''}</div></div>
-   ${depHTML(date, i, par)}
+   ${depHTML(date, i, par)}${pk}
    ${list.length ? `<div class="${cards ? 'grid' : ''}">${list.map((e,k) => evHTML(e, k, list.length, par)).join('')}</div>` : '<div class="sub" style="padding:6px">予定はまだありません</div>'}`;
 }
 /* 時刻: 分の位置を右にそろえ、↓は「:」の真下に置く */
@@ -446,6 +448,7 @@ const rideList = () => S.park.filter(x => x.kind !== 'show');
 const showList = () => S.park.filter(x => x.kind === 'show').sort((a,b) => String(a.date || '').localeCompare(String(b.date || '')) || (a.start ? 0 : 1) - (b.start ? 0 : 1) || String(a.start || '').localeCompare(String(b.start || '')));
 const priRides = pri => rideList().filter(x => (x.pri === 'must' ? 'must' : 'want') === pri).sort(sortOrd);
 const pevId = pid => 'park_' + pid;
+const parkDayOf = t => { const days = allDays(t); if (t.parkDay && days.includes(t.parkDay)) return t.parkDay; const s = showList().find(x => days.includes(x.date)); return s ? s.date : ''; };
 function syncParkEvent(pid, s) {
   const id = pevId(pid); const old = S.events.find(x => x.id === id);
   const keep = k => old ? old[k] || '' : '';
@@ -453,7 +456,7 @@ function syncParkEvent(pid, s) {
   data.order = (old && old.date === s.date && (old.start || '') === s.start && old.order != null) ? old.order : placeOrder(s.date, s.start, id);
   fire(setDoc(evRef(id), data));
 }
-function parkHTML(t, par) {
+function parkHTML(t, par, pd) {
   const rides = rideList(), shows = showList();
   if (!par && !rides.length && !shows.length) return '';
   const f = S.rideFilter; const keep = x => f === 'todo' ? !x.done : f === 'done' ? !!x.done : true;
@@ -463,18 +466,21 @@ function parkHTML(t, par) {
     ${par ? `<div class="acts"><button class="mini" data-a="moveRide" data-id="${x.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="mini" data-a="moveRide" data-id="${x.id}" data-dir="1" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="mini" data-a="editRide" data-id="${x.id}">編集</button></div>` : ''}</div>`;
   const groups = PRI.map(([k,l]) => { const all = priRides(k); if (!all.length) return '';
     const shown = all.filter(keep);
-    return `<div class="sech" style="margin-top:12px"><h3>${k === 'must' ? '★ ' : ''}${l}</h3><span class="sub">${all.filter(x => x.done).length}/${all.length}</span></div>` + (shown.length ? shown.map(x => rideRow(x, all.indexOf(x), all.length)).join('') : `<div class="sub" style="padding:4px 2px 8px">${f === 'todo' ? 'ぜんぶ乗れました 🎉' : 'この中にはありません'}</div>`); }).join('');
+    return `<div><div class="sech" style="margin-top:12px"><h3>${k === 'must' ? '★ ' : ''}${l}</h3><span class="sub">${all.filter(x => x.done).length}/${all.length}</span></div>` + (shown.length ? shown.map(x => rideRow(x, all.indexOf(x), all.length)).join('') : `<div class="sub" style="padding:4px 2px 8px">${f === 'todo' ? 'ぜんぶ乗れました 🎉' : 'この中にはありません'}</div>`) + '</div>'; }).join('');
   const chips = `<div class="chips" style="margin:0 0 8px">${PRI.map(([k,l]) => `<label><input type="radio" name="ridepri" data-a="ridePri" data-v="${k}" ${S.parkPri === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`;
-  const showRows = shows.map(x => `<button type="button" class="pk-show" ${par ? `data-a="editShow" data-id="${x.id}"` : ''}><b>${x.start ? esc(tt(x.start)) : '未定'}</b><span style="flex:1;min-width:0">${plain(x.name)}${x.place ? `<span class="sub"> ・${plain(x.place)}</span>` : ''}</span>${shows.some(y => y.date !== x.date) ? `<span class="sub">${x.date ? fmtD(x.date).replace(/\(.\)/, '') : ''}</span>` : ''}</button>`).join('');
+  const others = pd ? shows.filter(x => x.date !== pd) : shows; const here = shows.length - others.length;
+  const dayPick = par ? `<div class="pk-day"><span class="sub">行く日</span><select name="parkDay"><option value="">${pd ? '' : 'えらぶ'}</option>${dayOptions(t, pd)}</select></div>${pd ? '' : '<div class="sub">えらぶと、その日の予定の中にこの欄が入ります</div>'}` : '';
+  const showRows = others.map(x => `<button type="button" class="pk-show" ${par ? `data-a="editShow" data-id="${x.id}"` : ''}><b>${x.start ? esc(tt(x.start)) : '未定'}</b><span style="flex:1;min-width:0">${plain(x.name)}${x.place ? `<span class="sub"> ・${plain(x.place)}</span>` : ''}</span>${others.some(y => y.date !== x.date) || pd ? `<span class="sub">${x.date ? fmtD(x.date).replace(/\(.\)/, '') : ''}</span>` : ''}</button>`).join('');
   return `<div class="pk-card"><button type="button" class="pk-head" data-a="parkOpen"><h2>🎢 パーク</h2><span class="sub">${rides.length ? `<b>${done}</b>/${rides.length} 乗った` : ''}${shows.length ? `${rides.length ? '・' : ''}ショー${shows.length}` : ''}</span><span class="arw">${S.parkOpen ? '閉じる ▲' : '開く ▼'}</span></button>
    <div class="pk-body ${S.parkOpen ? '' : 'hide'}">
     <div class="sub">USJなどの中で、乗りたいアトラクションとパレード・ショーの時間</div>
+    ${dayPick}
     <div class="sech" style="margin-top:10px"><h3>アトラクション</h3></div>
     ${par ? `<form data-f="ridequick" class="qadd"><input type="text" name="name" placeholder="乗りたい・行きたい所を入れて「追加」" autocomplete="off"><button class="btn" type="submit">追加</button></form>${chips}` : ''}
-    ${rides.length ? `<div class="seg" style="display:inline-flex">${[['all','すべて'],['todo','まだ'],['done','乗った']].map(([k,l]) => `<button class="${f === k ? 'on' : ''}" data-a="filterRides" data-v="${k}">${l}</button>`).join('')}</div>${groups}` : '<div class="sub" style="padding:4px 2px">まだありません</div>'}
+    ${rides.length ? `<div class="seg" style="display:inline-flex">${[['all','すべて'],['todo','まだ'],['done','乗った']].map(([k,l]) => `<button class="${f === k ? 'on' : ''}" data-a="filterRides" data-v="${k}">${l}</button>`).join('')}</div><div class="pk-groups">${groups}</div>` : '<div class="sub" style="padding:4px 2px">まだありません</div>'}
     <div class="sech" style="margin-top:16px"><h3>パレード・ショー</h3>${par ? '<button class="mini" data-a="addShow">＋追加</button>' : ''}</div>
-    <div class="sub">時間を入れると、日ごとの予定としおりにも入ります</div>
-    ${showRows || '<div class="sub" style="padding:4px 2px">まだありません</div>'}
+    <div class="sub">${here ? `この日のものは、下の予定に時間順で入っています(${here}件)` : '時間を入れると、日ごとの予定としおりにも入ります'}</div>
+    ${showRows || (here ? '' : '<div class="sub" style="padding:4px 2px">まだありません</div>')}
    </div></div>`;
 }
 function rideForm(id) {
@@ -490,7 +496,7 @@ function rideForm(id) {
 function showForm(id) {
   const t = curTrip(); const x = id ? S.park.find(e => e.id === id) : null;
   const last = showList().slice(-1)[0];
-  const def = S.parkDate || (last && last.date) || t.start;
+  const def = S.parkDate || parkDayOf(t) || (last && last.date) || t.start;
   const d = x || { name:'', date: def, start:'', end:'', place:'', memo:'' };
   openModal(x ? 'イベントを編集' : 'イベントを追加', `<form data-f="show" data-id="${x ? x.id : ''}">
    ${inp('name','イベント名',d.name,'text','required placeholder="例: パレード、ショー"')}
@@ -1049,7 +1055,7 @@ async function duplicateTrip(srcId, name, newStart) {
     const src = S.trips.find(t => t.id === srcId); const off = diffDays(src.start, newStart); const dur = diffDays(src.start, src.end);
     const nref = doc(collection(db,'trips')); const b = writeBatch(db);
     const parents = [...new Set([...(src.parents || []), S.email])];
-    b.set(nref, { name, dest: src.dest || '', start: newStart, end: addDays(newStart, dur), people: src.people || '', notice: src.notice || '', memo: src.memo || '', ...(src.budget ? { budget: src.budget } : {}), ...(src.departs ? { departs: Object.fromEntries(Object.entries(src.departs).map(([k,v]) => [addDays(k, off), v])) } : {}), parents, viewers: src.viewers || [], createdBy: S.email, createdAt: serverTimestamp() });
+    b.set(nref, { name, dest: src.dest || '', start: newStart, end: addDays(newStart, dur), people: src.people || '', notice: src.notice || '', memo: src.memo || '', ...(src.budget ? { budget: src.budget } : {}), ...(src.parkDay ? { parkDay: addDays(src.parkDay, off) } : {}), ...(src.departs ? { departs: Object.fromEntries(Object.entries(src.departs).map(([k,v]) => [addDays(k, off), v])) } : {}), parents, viewers: src.viewers || [], createdBy: S.email, createdAt: serverTimestamp() });
     const [es, cs, its, tks, pks] = await Promise.all([getDocs(collection(db,'trips',srcId,'events')), getDocs(collection(db,'trips',srcId,'candidates')), getDocs(collection(db,'trips',srcId,'items')), getDocs(collection(db,'trips',srcId,'tasks')), getDocs(collection(db,'trips',srcId,'park'))]);
     // パーク: アトラクションは「まだ」に戻す。イベントは日付をずらし、予定の側も新しいIDでつなぎ直す
     const evById = new Map(es.docs.map(d => [d.id, d.data()]));
@@ -1229,6 +1235,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.name === 'kind') { const w = document.getElementById('bagSel'); if (w) w.style.display = e.target.value === 'car' ? 'none' : ''; }
+  if (e.target.name === 'parkDay' && S.tripId) { fire(updateDoc(doc(db,'trips',S.tripId), { parkDay: e.target.value })); S.parkOpen = true; toast(e.target.value ? fmtD(e.target.value) + 'の予定の中に入れました' : '行く日をなしにしました'); }
   const k = e.target.dataset && e.target.dataset.opt; if (k) { S.sh[k] = e.target.checked; render(); }
 });
 
