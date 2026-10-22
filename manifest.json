@@ -1,6 +1,6 @@
 {
-  "name": "Trip-App",
-  "short_name": "Trip-App",
+  "name": "Trip",
+  "short_name": "Trip",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
