@@ -218,7 +218,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v15.4';
+const VERSION = 'v15.5';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -269,6 +269,8 @@ const yen = n => '¥' + (Number(n) || 0).toLocaleString('ja-JP');
 
 /* ふりがな: 「漢字{かんじ}」と書くと、しおりでふりがなが付く */
 const plain = s => ruby(s, false);
+// 画面の文字(toastや見出し)に入れる名前。{ふりがな}だけ外し、HTML用の置きかえはしない
+const rawName = s => String(s ?? '').replace(/([一-鿿々〆ヶ]+)\{([^{}]+)\}/g, '$1').replace(/[{}]/g, '');
 const ruby = (text, on) => esc(text).replace(/([一-鿿々〆ヶ]+)\{([^{}]+)\}/g, on ? '<ruby>$1<rt>$2</rt></ruby>' : '$1').replace(/[{}]/g, '');
 
 /* ================= 認証 ================= */
@@ -286,7 +288,7 @@ const AUTHERR = {
 };
 onAuthStateChanged(auth, u => {
   S.ready = true; S.user = u; S.email = (u && u.email || '').toLowerCase();
-  if (u) subscribeTrips(); else { unsubTrips(); unsubTrip(); S.trips = []; S.tripId = null; }
+  if (u) subscribeTrips(); else { unsubTrips(); unsubTrip(); S.trips = []; S.tripId = null; closeModal(); }
   render();
 });
 
@@ -356,13 +358,44 @@ function render() {
   if (printing) return;
   const app = $('#app');
   if (!S.ready) { app.innerHTML = '<div class="center">読みこみ中…</div>'; return; }
-  if (!S.user) { app.innerHTML = authHTML(); return; }
+  if (!S.user) { setApp(app, authHTML()); return; }
   const t = curTrip();
   // 描き直しても、見ていた位置がずれないようにする
   const y = window.scrollY;
-  app.innerHTML = `<header class="top"><div class="ttl"><svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><path d="M404 118L130 234l104 40 42 112z" fill="#fff" stroke="currentColor" stroke-width="30" stroke-linejoin="round"/><path d="M234 274L404 118" stroke="currentColor" stroke-width="30" stroke-linecap="round"/></svg>家族旅行ノート<span class="ver">${VERSION}</span></div><div class="who">${esc(S.email)}</div><button data-a="logout">ログアウト</button></header>
-  <div class="wrap ${t ? 'has-trip' : ''}"><aside class="side">${listHTML()}</aside><main class="main">${t ? detailHTML(t) : '<div class="empty">左の一覧から旅行をえらんでください</div>'}</main></div>`;
+  setApp(app, `<header class="top"><div class="ttl"><svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><path d="M404 118L130 234l104 40 42 112z" fill="#fff" stroke="currentColor" stroke-width="30" stroke-linejoin="round"/><path d="M234 274L404 118" stroke="currentColor" stroke-width="30" stroke-linecap="round"/></svg>家族旅行ノート<span class="ver">${VERSION}</span></div><div class="who">${esc(S.email)}</div><button data-a="logout">ログアウト</button></header>
+  <div class="wrap ${t ? 'has-trip' : ''}"><aside class="side">${listHTML()}</aside><main class="main">${t ? detailHTML(t) : '<div class="empty">左の一覧から旅行をえらんでください</div>'}</main></div>`);
   if (window.scrollY !== y) window.scrollTo(0, y);
+}
+
+/* 画面の描き直し: 全部を作り直さず、変わった所だけを直す。
+   入力中の文字・キーボード・チェックの状態が、家族の更新などで消えないようにする(v15.5) */
+function setApp(el, html) {
+  const tpl = document.createElement('div'); tpl.innerHTML = html;
+  morph(el, tpl);
+}
+const nodeKey = n => n.nodeType !== 1 ? '#' + n.nodeType : n.nodeName + '|' + (n.getAttribute('data-f') || '') + '|' + (n.getAttribute('name') || '') + '|' + (n.getAttribute('type') || '');
+function morph(from, to) {
+  const a = [...from.childNodes], b = [...to.childNodes];
+  b.forEach((n, i) => {
+    const o = a[i];
+    if (!o) return from.appendChild(n);
+    if (nodeKey(o) !== nodeKey(n)) return from.replaceChild(n, o);
+    if (o.nodeType !== 1) { if (o.nodeValue !== n.nodeValue) o.nodeValue = n.nodeValue; return; }
+    patchEl(o, n);
+  });
+  for (let i = b.length; i < a.length; i++) a[i].remove();
+}
+function patchEl(o, n) {
+  for (const at of [...o.attributes]) if (!n.hasAttribute(at.name)) o.removeAttribute(at.name);
+  for (const at of [...n.attributes]) if (o.getAttribute(at.name) !== at.value) o.setAttribute(at.name, at.value);
+  const tag = o.nodeName, focused = o === document.activeElement;
+  if (tag === 'INPUT' && (o.type === 'checkbox' || o.type === 'radio')) { o.checked = n.hasAttribute('checked'); return; }
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return; // 入力中の文字はそのまま残す
+  if (tag === 'SELECT') {
+    const sel = n.querySelector('option[selected]'); const v = sel ? sel.value : (n.options[0] ? n.options[0].value : '');
+    morph(o, n); if (!focused) o.value = v; return;
+  }
+  morph(o, n);
 }
 
 function authHTML() {
@@ -567,7 +600,7 @@ const bagMark = b => isCar(b) ? '🚗 ' : S.items.some(x => x.isBag && !isCar(x)
 const bagIcon = (i, depth) => i.isBag ? bagMark(i) : '';
 // ポーチ(かばんの中のかばん)は見出しにせず、入っているかばんの一覧の中に段にして出す
 const isPouch = b => b.isBag && bagMark(b) === '👝 ';
-function bagPath(id) { const names = [], vis = new Set(); let cur = S.items.find(x => x.id === id); while (cur && !vis.has(cur.id)) { vis.add(cur.id); names.unshift(plain(cur.name)); cur = S.items.find(x => x.id === cur.bag && x.isBag); } return names.join(' › '); }
+function bagPath(id, raw) { const names = [], vis = new Set(); let cur = S.items.find(x => x.id === id); while (cur && !vis.has(cur.id)) { vis.add(cur.id); names.unshift(raw ? rawName(cur.name) : plain(cur.name)); cur = S.items.find(x => x.id === cur.bag && x.isBag); } return names.join(' › '); }
 // 入れ物を「車 → その中のかばん → さらに中のかばん…」の順に並べる
 function containerOrder() {
   const { roots, kids } = itemTree(); const out = [], seen = new Set();
@@ -1053,10 +1086,17 @@ const submitters = {
 document.addEventListener('submit', e => { e.preventDefault(); const f = e.target; const fn = submitters[f.dataset.f]; if (fn) fn(new FormData(f), f); });
 
 /* ================= 複製・削除・書き出し ================= */
+// Firestoreは1回にまとめて書けるのが500件までなので、450件ごとに分けて順番に保存する
+function bigBatch() {
+  const bs = [writeBatch(db)]; let n = 0;
+  const cur = () => { if (n >= 450) { bs.push(writeBatch(db)); n = 0; } n++; return bs[bs.length - 1]; };
+  return { set: (r, d) => cur().set(r, d), update: (r, d) => cur().update(r, d), delete: r => cur().delete(r),
+    async commit() { for (const b of bs) await b.commit(); } };
+}
 async function duplicateTrip(srcId, name, newStart) {
   try {
     const src = S.trips.find(t => t.id === srcId); const off = diffDays(src.start, newStart); const dur = diffDays(src.start, src.end);
-    const nref = doc(collection(db,'trips')); const b = writeBatch(db);
+    const nref = doc(collection(db,'trips')); const b = bigBatch();
     const parents = [...new Set([...(src.parents || []), S.email])];
     b.set(nref, { name, dest: src.dest || '', start: newStart, end: addDays(newStart, dur), people: src.people || '', notice: src.notice || '', memo: src.memo || '', ...(src.budget ? { budget: src.budget } : {}), ...(src.parkDay ? { parkDay: addDays(src.parkDay, off) } : {}), ...(src.departs ? { departs: Object.fromEntries(Object.entries(src.departs).map(([k,v]) => [addDays(k, off), v])) } : {}), parents, viewers: src.viewers || [], createdBy: S.email, createdAt: serverTimestamp() });
     const [es, cs, its, tks, pks] = await Promise.all([getDocs(collection(db,'trips',srcId,'events')), getDocs(collection(db,'trips',srcId,'candidates')), getDocs(collection(db,'trips',srcId,'items')), getDocs(collection(db,'trips',srcId,'tasks')), getDocs(collection(db,'trips',srcId,'park'))]);
@@ -1078,7 +1118,7 @@ async function deleteTrip(id) {
   try {
     toast('削除しています…');
     for (const n of ['events','candidates','reservations','items','souvenirs','expenses','tasks','notes','park']) {
-      const snap = await getDocs(collection(db,'trips',id,n)); const b = writeBatch(db); snap.docs.forEach(d => b.delete(d.ref)); await b.commit();
+      const snap = await getDocs(collection(db,'trips',id,n)); if (!snap.size) continue; const b = bigBatch(); snap.docs.forEach(d => b.delete(d.ref)); await b.commit();
     }
     await deleteDoc(doc(db,'trips',id));
     if (S.tripId === id) closeTrip(); toast('削除しました');
@@ -1087,8 +1127,22 @@ async function deleteTrip(id) {
 function exportJson() {
   const t = curTrip(); const strip = o => { const { id, ...r } = o; return { id, ...r }; };
   const data = { exportedAt: new Date().toISOString(), trip: strip({ ...t, createdAt: undefined }), events: S.events, candidates: S.cands, reservations: S.resvs, items: S.items, souvenirs: S.gifts, expenses: S.expenses, tasks: S.tasks, notes: S.notes, park: S.park };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `trip-${t.name}.json`; document.body.appendChild(a); a.click(); a.remove();
+  const name = `trip-${rawName(t.name).replace(/[\\/:*?"<>|\s]+/g, '_')}-${today()}.json`;
+  const json = JSON.stringify(data, null, 2);
+  // iPhone・iPadでは共有メニューを出す(「"ファイル"に保存」で保存できる)。使えないときはそのままダウンロード
+  try {
+    const file = new File([json], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: name }).catch(e => { if (e && e.name !== 'AbortError') download(json, name); });
+      return;
+    }
+  } catch (e) {}
+  download(json, name);
+}
+function download(json, name) {
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /* ================= クリック処理 ================= */
@@ -1112,7 +1166,7 @@ const H = {
     openModal('旅行を複製', `<form data-f="dup" data-id="${t.id}"><div class="sub">予定・パーク・行き先候補・持ち物・準備・予算の金額をコピーします(予約・お土産・支出はコピーしません。持ち物・準備・アトラクションは「まだ」に戻ります)。日付は新しい出発日に合わせてずらします。</div>
      ${inp('name','新しい旅行名', t.name + '(コピー)','text','required')}${inp('start','新しい出発日','', 'date','required')}${acts('複製する')}</form>`);
   },
-  delTrip(d) { const t = S.trips.find(x => x.id === d.id); confirmModal('旅行を削除', `「${t.name}」を削除します。予定・予約などもすべて消えて、元にもどせません。`, 'doDelTrip', d.id); },
+  delTrip(d) { const t = S.trips.find(x => x.id === d.id); confirmModal('旅行を削除', `「${rawName(t.name)}」を削除します。予定・予約などもすべて消えて、元にもどせません。`, 'doDelTrip', d.id); },
   doDelTrip(d) { closeModal(); deleteTrip(d.id); },
   tab(d) { S.tab = d.t; render(); window.scrollTo(0,0); },
   view(d) { S.view = d.v; render(); },
@@ -1151,11 +1205,11 @@ const H = {
     if (isCar(it)) return toast('車は一番外の入れ物なので、移動できません');
     const par = roots.some(r => r.id === it.id) ? '' : it.bag;
     const dests = [['', 'かばんに入れない'], ...S.items.filter(x => x.isBag && !ng.has(x.id)).sort(sortOrd).map(b => [b.id, bagMark(b) + bagPath(b.id)])];
-    openModal(`「${plain(it.name)}」を移動`, `<div class="sub">入れる先をタップ</div><div class="mvlist">${dests.map(([v,l]) => `<button type="button" class="${v === par ? 'cur' : ''}" data-a="doMoveItem" data-id="${it.id}" data-to="${v}" ${v === par ? 'disabled' : ''}>${v === par ? '✓ ' : ''}${l}${v === par ? '(今ここ)' : ''}</button>`).join('')}</div>`);
+    openModal(`「${rawName(it.name)}」を移動`, `<div class="sub">入れる先をタップ</div><div class="mvlist">${dests.map(([v,l]) => `<button type="button" class="${v === par ? 'cur' : ''}" data-a="doMoveItem" data-id="${it.id}" data-to="${v}" ${v === par ? 'disabled' : ''}>${v === par ? '✓ ' : ''}${l}${v === par ? '(今ここ)' : ''}</button>`).join('')}</div>`);
   },
   doMoveItem(d) {
     closeModal(); fire(updateDoc(itRef(d.id), { bag: d.to || '', order: Date.now() }));
-    toast(d.to ? bagPath(d.to) + ' に入れました' : 'かばんから出しました');
+    toast(d.to ? bagPath(d.to, true) + ' に入れました' : 'かばんから出しました');
   },
   itemBag(d) { S.itemBag = d.v; render(); },
   secOrderModal() {
@@ -1171,12 +1225,12 @@ const H = {
   },
   copyItemsModal() {
     const others = S.trips.filter(t => t.id !== S.tripId);
-    openModal('他の旅行から持ち物をコピー', others.length ? `<div class="sub">コピー元の旅行をえらんでください(同じ名前の持ち物はコピーしません)</div>` + others.map(t => `<div class="card tcard" data-a="copyItems" data-id="${t.id}"><h2>${esc(t.name)}</h2><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}</div></div>`).join('') : '<p>ほかの旅行がありません</p>');
+    openModal('他の旅行から持ち物をコピー', others.length ? `<div class="sub">コピー元の旅行をえらんでください(同じ名前の持ち物はコピーしません)</div>` + others.map(t => `<div class="card tcard" data-a="copyItems" data-id="${t.id}"><h2>${plain(t.name)}</h2><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}</div></div>`).join('') : '<p>ほかの旅行がありません</p>');
   },
   async copyItems(d) {
     closeModal();
     try {
-      const snap = await getDocs(collection(db,'trips',d.id,'items')); const have = new Set(S.items.map(i => i.name)); let n = 0; const b = writeBatch(db); let t = Date.now();
+      const snap = await getDocs(collection(db,'trips',d.id,'items')); const have = new Set(S.items.map(i => i.name)); let n = 0; const b = bigBatch(); let t = Date.now();
       const src = snap.docs.map(x => ({ id: x.id, ...x.data() })).sort(sortOrd); const map = {};
       S.items.filter(i => i.isBag).forEach(i => { const o = src.find(x => x.isBag && x.name === i.name); if (o) map[o.id] = i.id; });
       src.filter(x => x.isBag && !map[x.id]).forEach(x => { map[x.id] = doc(collection(db,'trips',S.tripId,'items')).id; });
@@ -1245,7 +1299,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.name === 'kind') { const w = document.getElementById('bagSel'); if (w) w.style.display = e.target.value === 'car' ? 'none' : ''; }
-  if (e.target.name === 'parkDay' && S.tripId) { fire(updateDoc(doc(db,'trips',S.tripId), { parkDay: e.target.value })); S.parkOpen = true; toast(e.target.value ? fmtD(e.target.value) + 'の予定の中に入れました' : '行く日をなしにしました'); }
+  if (e.target.name === 'parkDay' && S.tripId) { fire(updateDoc(doc(db,'trips',S.tripId), { parkDay: e.target.value })); S.parkOpen = true; toast(e.target.value ? fmtD(e.target.value) + 'の予定の中に入れました' : showList().length ? '行く日をえらんでいないので、ショーのある日に出します' : '行く日をなしにしました'); }
   const k = e.target.dataset && e.target.dataset.opt; if (k) { S.sh[k] = e.target.checked; render(); }
 });
 
