@@ -1,0 +1,23 @@
+name: 旅行までの日数の通知
+
+on:
+  schedule:
+    - cron: "50 22 * * *"   # 毎朝、日本時間7:50ごろ(UTCで22:50)
+  workflow_dispatch:       # 手動でも実行できる
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install firebase-admin@12
+      - run: node notify.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

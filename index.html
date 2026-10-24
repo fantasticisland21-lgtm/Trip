@@ -94,6 +94,7 @@ header.top button{background:var(--main2);border:0;color:var(--ink);border-radiu
 .tag.warn{background:#fbf3db;color:#89632a}
 .tag.ok{background:#dbeddb;color:#2b593f}
 .tag.gray{background:#f1f1ef;color:#5f5e5b}
+.tag.cd{font-weight:600}
 .dhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}.dhead>div{min-width:0;flex:1}
 .tname{display:flex;align-items:center;gap:6px}.tname h1{word-break:break-word}.tname .mini{flex:0 0 auto;min-height:30px;padding:2px 10px;font-size:13px}
 .back{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;white-space:nowrap}
@@ -201,6 +202,7 @@ rt{font-size:.55em}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot, query, where, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getMessaging, getToken, deleteToken, isSupported as messagingSupported } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCD_oEF8i01mfxVVg09QCp2xpcIgmCmLMI",
@@ -218,7 +220,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v15.5';
+const VERSION = 'v16';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -249,7 +251,7 @@ const S = {
   trips:[], tripMap:{parents:[], viewers:[]}, tripId:null,
   tab:'schedule', view:'timeline',
   events:[], cands:[], resvs:[], items:[], itemFilter:'all', itemBag:'', gifts:[], giftFilter:'all', expenses:[], expFilter:'all', tasks:[], taskFilter:'todo', taskWho:'', notes:[], park:[], parkOpen:false, parkPri:'must', rideFilter:'all', parkDate:'',
-  unTrips:[], unSub:[],
+  unTrips:[], unSub:[], pushMsg:'',
   sh:{ items:true, ruby:true, place:true, map:false, url:false, rain:false, memo:false, resv:false, resvNo:false, notice:true, people:true, gifts:true, giftPrice:false }
 };
 const curTrip = () => S.trips.find(t => t.id === S.tripId);
@@ -288,7 +290,7 @@ const AUTHERR = {
 };
 onAuthStateChanged(auth, u => {
   S.ready = true; S.user = u; S.email = (u && u.email || '').toLowerCase();
-  if (u) subscribeTrips(); else { unsubTrips(); unsubTrip(); S.trips = []; S.tripId = null; closeModal(); }
+  S.tripsLoaded = false; if (u) subscribeTrips(); else { unsubTrips(); unsubTrip(); S.trips = []; S.tripId = null; closeModal(); }
   render();
 });
 
@@ -303,6 +305,7 @@ function subscribeTrips() {
       S.tripMap[role] = snap.docs.map(d => ({ id:d.id, ...d.data() }));
       const m = new Map(); [...S.tripMap.viewers, ...S.tripMap.parents].forEach(t => m.set(t.id, t));
       S.trips = [...m.values()].sort((a,b) => (a.start || '').localeCompare(b.start || ''));
+      S.tripsLoaded = true; refreshDevice();
       if (S.tripId && !m.has(S.tripId)) { unsubTrip(); S.tripId = null; }
       render();
     }, err => toast('旅行を読みこめません(' + err.code + ')' + (err.code === 'permission-denied' ? '。Firebaseのルールが公開されているか確認してください' : ''), true)));
@@ -365,6 +368,7 @@ function render() {
   setApp(app, `<header class="top"><div class="ttl"><svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><path d="M404 118L130 234l104 40 42 112z" fill="#fff" stroke="currentColor" stroke-width="30" stroke-linejoin="round"/><path d="M234 274L404 118" stroke="currentColor" stroke-width="30" stroke-linecap="round"/></svg>家族旅行ノート<span class="ver">${VERSION}</span></div><div class="who">${esc(S.email)}</div><button data-a="logout">ログアウト</button></header>
   <div class="wrap ${t ? 'has-trip' : ''}"><aside class="side">${listHTML()}</aside><main class="main">${t ? detailHTML(t) : '<div class="empty">左の一覧から旅行をえらんでください</div>'}</main></div>`);
   if (window.scrollY !== y) window.scrollTo(0, y);
+  updateIconBadge();
 }
 
 /* 画面の描き直し: 全部を作り直さず、変わった所だけを直す。
@@ -417,7 +421,7 @@ function listHTML() {
   const now = S.trips.filter(t => (t.end || t.start || '') >= td), past = S.trips.filter(t => (t.end || t.start || '') < td);
   const card = t => `<div class="card tcard ${t.id === S.tripId ? 'cur' : ''}" data-a="openTrip" data-id="${t.id}">
     <h2>${plain(t.name)}</h2><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div>
-    <div style="margin-top:6px"><span class="tag ${isParent(t) ? '' : 'gray'}">${isParent(t) ? '保護者(編集できる)' : '見るだけ'}</span>${t.people ? `<span class="sub">${esc(t.people)}</span>` : ''}</div>
+    <div style="margin-top:6px">${cdTag(t)}<span class="tag ${isParent(t) ? '' : 'gray'}">${isParent(t) ? '保護者(編集できる)' : '見るだけ'}</span>${t.people ? `<span class="sub">${esc(t.people)}</span>` : ''}</div>
     ${isParent(t) ? `<div class="eact"><button class="mini" data-a="dupTrip" data-id="${t.id}">複製</button><button class="mini ng" data-a="delTrip" data-id="${t.id}">削除</button></div>` : ''}</div>`;
   return `<div class="bar"><h2>旅行の一覧</h2><button class="btn" data-a="newTrip">＋新しい旅行</button></div>
    ${now.length ? now.map(card).join('') : '<div class="empty">まだ旅行がありません。<br>「＋新しい旅行」から作りましょう</div>'}
@@ -429,7 +433,7 @@ function detailHTML(t) {
   const tabs = [['schedule','予定'],['cands','行き先'],['resv','予約'],['items','持ち物'],['tasks','準備'],['gifts','お土産'],...(par ? [['budget','予算']] : []),['notes','メモ'],['shiori','しおり'],['settings','設定']];
   if (S.tab === 'budget' && !par) S.tab = 'schedule';
   const body = S.tab === 'schedule' || S.tab === 'park' ? scheduleHTML(t,par) : S.tab === 'cands' ? candsHTML(par) : S.tab === 'resv' ? resvHTML(par) : S.tab === 'items' ? itemsHTML(par) : S.tab === 'tasks' ? tasksHTML(t,par) : S.tab === 'gifts' ? giftsHTML(par) : S.tab === 'budget' ? budgetHTML(t,par) : S.tab === 'notes' ? notesHTML(par) : S.tab === 'shiori' ? shioriHTML(t) : settingsHTML(t,par);
-  return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><div class="tname"><h1>${plain(t.name)}</h1>${par ? '<button class="mini" data-a="renameTrip">✏️ 名前</button>' : ''}</div><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div></div></div>
+  return `<div class="dhead"><button class="back" data-a="closeTrip">‹ 一覧</button><div><div class="tname"><h1>${plain(t.name)}</h1>${par ? '<button class="mini" data-a="renameTrip">✏️ 名前</button>' : ''}</div><div class="sub">${fmtD(t.start)}〜${fmtD(t.end)}${t.dest ? ' / ' + plain(t.dest) : ''}</div>${cdTag(t) ? `<div style="margin-top:4px">${cdTag(t)}</div>` : ''}</div></div>
   <nav class="tabs">${tabs.map(([k,l],i) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-t="${k}"${i === 5 ? ` style="grid-column:${11 - tabs.length} / span 2"` : ''}>${l}</button>`).join('')}</nav>
   ${par ? '' : '<div class="note">この旅行は「見るだけ」です(変更は保護者のアカウントでできます)</div>'}
   ${body}`;
@@ -760,6 +764,8 @@ function settingsHTML(t, par) {
     <div class="sub" style="margin-top:6px"><b>保護者(編集できる)</b><br>${(t.parents || []).map(esc).join('<br>') || '-'}</div>
     <div class="sub" style="margin-top:6px"><b>見るだけ</b><br>${(t.viewers || []).map(esc).join('<br>') || '-'}</div></div>
    <div class="card"><h2>アプリの情報</h2><div class="sub" style="margin-top:6px">バージョン: ${VERSION}<br>ログイン中: ${esc(S.email)}<br>あなたの権限: ${par ? '保護者(編集できる)' : '見るだけ'}</div></div>
+   <div class="card"><h2>次の旅行までの日数の通知</h2><div class="sub">毎朝7時50分ごろ、次の旅行まであと何日かを知らせ、ホーム画面のアイコンの数字も変えます(この端末だけ)。ホーム画面のアイコンから開いたときに使えます。${par ? '' : '<br>見るだけの人は通知は届かず、アイコンの数字はアプリを開いたときに変わります。'}</div>
+    <div class="eact"><button class="mini" data-a="pushOn">${pushState() === 'granted' ? '通知の登録をやり直す' : '通知を受け取る'}</button></div>${S.pushMsg ? `<div class="sub" style="margin-top:6px">${esc(S.pushMsg)}</div>` : ''}</div>
    <div class="card"><h2>データのバックアップ</h2><div class="sub">この旅行の中身をファイルに書き出します</div>
     <div class="eact"><button class="mini" data-a="exportJson">書き出す(JSON)</button></div></div>
    ${par ? `<div class="card"><h2>旅行の削除</h2><div class="eact"><button class="mini ng" data-a="delTrip" data-id="${t.id}">この旅行を削除</button></div></div>` : ''}`;
@@ -1117,7 +1123,7 @@ async function duplicateTrip(srcId, name, newStart) {
 async function deleteTrip(id) {
   try {
     toast('削除しています…');
-    for (const n of ['events','candidates','reservations','items','souvenirs','expenses','tasks','notes','park']) {
+    for (const n of ['events','candidates','reservations','items','souvenirs','expenses','tasks','notes','park','devices']) {
       const snap = await getDocs(collection(db,'trips',id,n)); if (!snap.size) continue; const b = bigBatch(); snap.docs.forEach(d => b.delete(d.ref)); await b.commit();
     }
     await deleteDoc(doc(db,'trips',id));
@@ -1145,6 +1151,107 @@ function download(json, name) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
+/* ================= 次の旅行までの日数(v16) ================= */
+// 次の旅行: 今日以降に出発する旅行のうち、いちばん近いもの
+function nextTrip() {
+  const td = today();
+  return S.trips.filter(t => t.start && t.start >= td).sort((a,b) => a.start.localeCompare(b.start))[0] || null;
+}
+// 旅行の一覧と見出しに出すラベル
+function cdTag(t) {
+  if (!t || !t.start) return '';
+  const n = diffDays(today(), t.start);
+  if (n > 0) return `<span class="tag cd">あと${n}日</span>`;
+  if (n === 0) return '<span class="tag ok cd">きょう出発</span>';
+  if (today() <= (t.end || t.start)) return '<span class="tag ok cd">旅行中</span>';
+  return '';
+}
+// ホーム画面のアイコンの数字(次の旅行まであと何日か。出発の日・旅行がないときは消す)。
+// iPhoneは通知を許可していないと出ない。ホーム画面から開いたときだけ使える
+let lastBadge = null;
+function setIconBadge(n) {
+  try {
+    if (!('setAppBadge' in navigator)) return;
+    lastBadge = n;
+    const p = n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+    if (p && p.catch) p.catch(e => console.error(e));
+  } catch (e) { console.error(e); }
+}
+function updateIconBadge() {
+  if (!S.user || !S.tripsLoaded) return; // 旅行を読みこむ前に数字を消さない
+  const t = nextTrip(); const n = t ? diffDays(today(), t.start) : 0;
+  if (n !== lastBadge) setIconBadge(n);
+}
+// 日付が変わったあとに画面へ戻ったときも、日数を合わせる
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { lastBadge = null; render(); refreshDevice(); } });
+
+/* ---- 毎朝の通知の登録(この端末を送り先にする) ----
+   送り先は、保護者になっている旅行の中(trips/{旅行ID}/devices/{トークン})に入れる。
+   Firestoreのルールを変えずに使えるため。毎朝 GitHub Actions(notify.js)が送る */
+const VAPID_KEY = '';
+const TOKEN_KEY = 'trip_push_token', TOKEN_DAY_KEY = 'trip_push_day';
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k,v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const pushState = () => ('Notification' in window) ? Notification.permission : 'none';
+const parentTrips = () => S.trips.filter(isParent);
+async function pushReady() {
+  try { return 'Notification' in window && 'serviceWorker' in navigator && await messagingSupported(); } catch (e) { return false; }
+}
+async function registerDevice() {
+  if (!VAPID_KEY) return 'nokey';
+  const reg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+  const token = await getToken(getMessaging(fbApp), { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+  if (!token) return null;
+  const trips = parentTrips();
+  if (!trips.length) return 'notrip';
+  const old = lsGet(TOKEN_KEY);
+  const b = writeBatch(db);
+  for (const t of trips) {
+    if (old && old !== token) b.delete(doc(db,'trips',t.id,'devices',old));
+    b.set(doc(db,'trips',t.id,'devices',token), { token, email: S.email, updatedAt: new Date().toISOString() });
+  }
+  await b.commit();
+  lsSet(TOKEN_KEY, token); lsSet(TOKEN_DAY_KEY, today());
+  return token;
+}
+// 通知を許可済みなら、1日1回だけ登録を新しくする(新しく作った旅行にも入る。何も表示しない)
+async function refreshDevice() {
+  try {
+    if (!S.user || !S.trips.length || pushState() !== 'granted' || lsGet(TOKEN_DAY_KEY) === today()) return;
+    if (!(await pushReady())) return;
+    await registerDevice();
+  } catch (e) { console.error(e); }
+}
+// ログアウトするときは、この端末への通知も止める(電波がないときに待ち続けないよう、3秒で先に進む)
+async function unregisterDevice() {
+  const token = lsGet(TOKEN_KEY);
+  const work = (async () => {
+    if (!token) return;
+    const b = writeBatch(db); parentTrips().forEach(t => b.delete(doc(db,'trips',t.id,'devices',token))); await b.commit();
+    if (await pushReady() && pushState() === 'granted') await deleteToken(getMessaging(fbApp));
+  })();
+  try { await Promise.race([work, new Promise(r => setTimeout(r, 3000))]); } catch (e) { console.error(e); }
+  lsSet(TOKEN_KEY, null); lsSet(TOKEN_DAY_KEY, null);
+}
+async function pushOn() {
+  const say = m => { S.pushMsg = m; render(); };
+  try {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return say('この画面では通知を使えません。ホーム画面のアイコンから開いてください。');
+    // iPhoneでは、ボタンを押したときに許可を求める必要がある
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return say('通知が許可されませんでした。設定アプリの「通知」から許可できます。');
+    lastBadge = null; updateIconBadge();
+    if (!parentTrips().length) return say('アイコンの数字が出るようになりました(毎朝の通知は、保護者になっている旅行がある人に届きます)。');
+    if (!(await pushReady())) return say('アイコンの数字は出るようになりましたが、この端末では毎朝の通知を使えません。');
+    const r = await registerDevice();
+    if (r === 'nokey') return say('アイコンの数字が出るようになりました。毎朝の通知は、Firebaseの準備ができたら使えるようになります。');
+    if (!r) return say('登録できませんでした。もう一度押してください。');
+    say('この端末で、毎朝の通知とアイコンの数字が使えるようになりました。');
+  } catch (e) {
+    console.error(e); say('登録できませんでした。ホーム画面から開き直して、もう一度押してください。');
+  }
+}
+
 /* ================= クリック処理 ================= */
 const H = {
   authMode() { S.authMode = S.authMode === 'login' ? 'signup' : 'login'; S.authErr = ''; render(); },
@@ -1153,7 +1260,8 @@ const H = {
     if (!email) return toast('先にメールアドレスを入れてください', true);
     try { await sendPasswordResetEmail(auth, email); toast('再設定のメールを送りました'); } catch (e) { toast(AUTHERR[e.code] || e.code, true); }
   },
-  logout() { signOut(auth); },
+  async logout() { await unregisterDevice(); setIconBadge(0); signOut(auth); },
+  pushOn() { pushOn(); },
   openTrip(d) { openTrip(d.id); },
   closeTrip() { closeTrip(); },
   newTrip() { tripForm(null); },
