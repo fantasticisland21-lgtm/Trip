@@ -220,7 +220,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v16';
+const VERSION = 'v16.1';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -1188,7 +1188,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ---- 毎朝の通知の登録(この端末を送り先にする) ----
    送り先は、保護者になっている旅行の中(trips/{旅行ID}/devices/{トークン})に入れる。
    Firestoreのルールを変えずに使えるため。毎朝 GitHub Actions(notify.js)が送る */
-const VAPID_KEY = '';
+const VAPID_KEY = 'BDYi7vxmu3WNg7dB81D_cgkqsIND5-vyU6KeP0d8dyzQLHioHd0sGZcoZKen3U_BjH050GGD3Il3vRp0ifbho1I';
 const TOKEN_KEY = 'trip_push_token', TOKEN_DAY_KEY = 'trip_push_day';
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k,v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
