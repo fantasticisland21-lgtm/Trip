@@ -220,7 +220,7 @@ try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabMa
 catch (e) { db = getFirestore(fbApp); }
 
 /* ================= 共通 ================= */
-const VERSION = 'v16.2';
+const VERSION = 'v16.3';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const WD = ['日','月','火','水','木','金','土'];
@@ -648,10 +648,9 @@ const TPL = [['交通(新幹線・飛行機など)の予約',-60],['宿の予約
 function dueTag(tk) {
   if (tk.done || !tk.due) return '';
   const n = diffDays(today(), tk.due);
-  if (n < 0) return `<span class="tag ng">やばい・${fmtD(tk.due)}まで</span>`;
-  if (n === 0) return '<span class="tag warn">そろそろ・今日まで</span>';
-  if (n <= 3) return `<span class="tag warn">そろそろ・${fmtD(tk.due)}まで・あと${n}日</span>`;
-  return `<span class="tag gray">${fmtD(tk.due)}まで${n <= 7 ? '・あと' + n + '日' : ''}</span>`;
+  if (n < 0) return `<span class="tag ng">期限切れ(${fmtD(tk.due)})</span>`;
+  if (n === 0) return '<span class="tag ng">今日まで</span>';
+  return `<span class="tag ${n <= 3 ? 'warn' : 'gray'}">${fmtD(tk.due)}まで${n <= 7 ? '・あと' + n + '日' : ''}</span>`;
 }
 const taskSort = (a,b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (a.due ? 0 : 1) - (b.due ? 0 : 1) || String(a.due || '').localeCompare(String(b.due || '')) || (a.order ?? 0) - (b.order ?? 0);
 function tasksHTML(t, par) {
@@ -663,7 +662,7 @@ function tasksHTML(t, par) {
   const done = list.filter(x => x.done).length; const late = list.filter(x => !x.done && x.due && x.due < today()).length;
   const seg = [['todo','まだ'],['done','終わった'],['all','すべて']].map(([k,l]) => `<button class="${f === k ? 'on' : ''}" data-a="filterTasks" data-v="${k}">${l}</button>`).join('');
   return `<div class="bar"><h2>準備することリスト</h2><div class="sub"><b>${done}</b> / ${list.length} 終わった</div></div>
-   ${late ? `<div class="note" style="background:#ffe3e3;color:#c92a2a">やばい(期限をすぎた)ものが ${late}件 あります</div>` : ''}
+   ${late ? `<div class="note" style="background:#ffe3e3;color:#c92a2a">期限をすぎたものが ${late}件 あります</div>` : ''}
    ${par ? `<form data-f="taskquick" class="qadd"><input type="text" name="title" placeholder="やることを入力して「追加」" autocomplete="off"><button class="btn" type="submit">追加</button></form>` : ''}
    <div class="bar"><div class="seg">${seg}</div>${par ? '<button class="mini" data-a="taskTplModal">よくある準備</button>' : ''}</div>
    ${who.length ? `<div class="chips" style="margin:4px 0 6px">${['', ...who].map(w => `<label><input type="radio" name="taskwho" data-a="taskWho" data-v="${esc(w)}" ${S.taskWho === w ? 'checked' : ''}><span>${w ? '👤 ' + esc(w) : 'みんな'}</span></label>`).join('')}</div>` : ''}
